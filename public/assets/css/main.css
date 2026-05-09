@@ -1,0 +1,130 @@
+#content-wrapper{
+	margin-top: 50px;
+}
+ 
+a:hover{
+	text-decoration: none;
+}
+
+#dataTable{
+	font-size: 14px;
+}
+
+.profile-image{
+	width: 100x;
+	height: 100px;
+}
+
+.text-center{
+	text-align:center;
+}
+
+.larger-icon{
+	font-size: 20px
+}
+
+.red{
+	color:red;
+}
+
+footer {
+  position: fixed !important; /* or absolute, but fixed is common for this issue */
+  bottom: 0 !important;
+  width: 100% !important;
+}
+
+main{
+	margin-bottom: 250px !important;
+}
+
+.pending-links{
+	position:relative;
+	left:-25px;
+	cursor:pointer;
+}
+
+.delete-dream{
+	cursor:pointer;
+}
+
+.accept-link{
+	color:lightseagreen;
+	font-size:20px;
+}
+
+.decline-link{
+	color:lightcoral;
+	font-size:20px	
+}
+
+.block-link, .search-block-link{
+	color:lightgray;
+	font-size:20px;
+	cursor: pointer;
+}
+
+.link-pending{
+	color:lightsteelblue;
+	cursor:pointer;
+}
+
+.request-link{
+	color:#007bff;
+	cursor:pointer;
+}
+
+.profile-image-small{
+	height: 50px;
+	width: 50px;
+}
+
+.float-left{
+	float:left;
+}
+
+.float-right{
+	float:right;
+}
+
+.float-clear{
+	clear:both;
+}
+
+#full_description{	
+	min-height: 150px;
+}
+
+#content-wrapper{
+	padding-bottom: 10px;
+}
+
+.pointer{
+	cursor:pointer;
+}
+
+.recent-ai-prompt-wrapper{
+	display: none;
+}
+
+#topTagsChart{
+	max-height: 200px;
+	margin-left:auto;
+	margin-right:auto;
+}
+
+.ai-bot{
+	width:50px; 
+	height:50px;	
+}
+
+.book-icon-header{
+	font-size: 17px;
+	position:relative;
+	top: 5px;
+}
+
+ 
+.technique-name {
+	font-weight: bold;
+	color: #2980b9;
+}
