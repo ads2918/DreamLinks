@@ -28,7 +28,7 @@ $avatar = function ($image) {
 		<link href="<?= base_url('assets/css/main.css'); ?>" rel="stylesheet">
 		<link href="<?= base_url('assets/css/bootstrap-tagsinput.css'); ?>" rel="stylesheet">
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
-		<link href="<?= base_url('assets/css/dreamlinks.css'); ?>?v=<?= date('YmdH') ?>" rel="stylesheet">
+		<link href="<?= base_url('assets/css/dreamlinks.css'); ?>?v=<?= filemtime(FCPATH . 'assets/css/dreamlinks.css') ?>" rel="stylesheet">
 		<!-- Google tag (gtag.js) -->
 		<script async src="https://www.googletagmanager.com/gtag/js?id=G-EDLB3K5XWK"></script>
 		<script>
