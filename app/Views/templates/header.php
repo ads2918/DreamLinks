@@ -52,7 +52,7 @@ $avatar = function ($image) {
 					<div class="dl-nav-guest">
 						<a class="dl-link-quiet" href="<?= site_url('learn'); ?>">How to</a>
 						<a class="dl-link-quiet" href="<?= site_url('contact'); ?>">Contact</a>
-						<?php if ($uri !== 'user/login' && $uri !== ''): ?>
+						<?php if ($uri !== 'user/login'): ?>
 							<a class="dl-btn is-small is-plain" href="<?= site_url('user/login'); ?>">Log in</a>
 						<?php endif; ?>
 						<?php if ($uri !== 'user/register'): ?>

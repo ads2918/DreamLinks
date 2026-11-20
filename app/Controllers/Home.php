@@ -39,7 +39,9 @@ class Home extends BaseController
 			$data['public_dreams'] = $public_dreams;
 			return view('templates/header', $data).view('pages/home',$data).view('templates/footer');
 		}else{
-			return view('pages/landingPage'); 
+			$data['title'] = 'AI Dream Analysis & Social Dream Journaling';
+			$data['description'] = 'Log your dreams, discover patterns with AI analysis, track the moon, and share dreams with the people you trust on DreamLinks.';
+			return view('templates/header', $data).view('pages/landingPage').view('templates/footer');
 		}
 	}
 }
