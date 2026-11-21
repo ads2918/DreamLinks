@@ -24,7 +24,7 @@ class BlockModel extends Model
 					->where('blocked_by_user_id',$blocked_by_user_id)
 					->set([
 							'disabled_flag' => 1,
-							'disabled_datetime' => date('Y-m-d h:i:s',strtotime('now'))
+							'disabled_datetime' => date('Y-m-d H:i:s')
 						  ])
 					->update();
 		return $results;

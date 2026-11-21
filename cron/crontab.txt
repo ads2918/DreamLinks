@@ -1,0 +1,7 @@
+# DreamLinks cron jobs for the Linux server. Install with: crontab -e  (paste these lines)
+# Nightly AI readings for new dreams
+15 3 * * * cd /var/www/html/dreamlinks && php public/index.php cron/ai-user-dream-run >> writable/logs/cron.log 2>&1
+# Moon cycle log, once a day
+0 4 * * * cd /var/www/html/dreamlinks && php public/index.php cron/moon/logcycles >> writable/logs/cron.log 2>&1
+# Morning reminders: runs every hour, emails each dreamer at their own chosen hour
+2 * * * * cd /var/www/html/dreamlinks && php public/index.php cron/reminders >> writable/logs/cron.log 2>&1

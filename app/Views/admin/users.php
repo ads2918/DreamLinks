@@ -9,14 +9,19 @@
 				<th>&nbsp;</th>
 			</tr>
 		</thead>
-		</tbody>
+		<tbody>
 <?php if(!empty($pending_user_list)): ?>
 	<?php foreach($pending_user_list as $user_record): ?>
 		<tr>
-			<td><?php echo $user_record['username'] ;?></td>
-			<td><?php echo $user_record['email']; ?></td>
+			<td><?php echo esc($user_record['username']); ?></td>
+			<td><?php echo esc($user_record['email']); ?></td>
 			<td><?php echo date('m/d/Y',strtotime($user_record['created_datetime'])); ?></td>
-			<td><a href="<?php echo site_url('admin/approve-user/'. $user_record['id']); ?>">Approve</a></td>
+			<td>
+				<form action="<?php echo site_url('admin/approve-user/'. (int) $user_record['id']); ?>" method="post" data-confirm="Approve <?php echo esc($user_record['username'], 'attr'); ?>?">
+					<?= csrf_field() ?>
+					<button type="submit" class="btn btn-sm btn-primary">Approve</button>
+				</form>
+			</td>
 		</tr>
 	<?php endforeach; ?>
 <?php endif; ?>
@@ -24,7 +29,6 @@
 </table>
 <hr>
 <h5>Active Users</h5>
-<table class='table'>
 <?php if(!empty($active_user_list)): ?>
 	<table class='table table-sm' id="activeUsers">
 		<thead>
@@ -34,16 +38,14 @@
 				<th>Created</th>
 			</tr>
 		</thead>
-		</tbody>
+		<tbody>
 	<?php foreach($active_user_list as $user_record): ?>
 		<tr>
-			<td><?php echo $user_record['username'] ;?></td>
-			<td><?php echo $user_record['email']; ?></td>
+			<td><?php echo esc($user_record['username']); ?></td>
+			<td><?php echo esc($user_record['email']); ?></td>
 			<td><?php echo date('m/d/Y',strtotime($user_record['created_datetime'])); ?></td>
 		</tr>
 	<?php endforeach; ?>
-	
-	 
-<?php endif; ?>	
-	</tbody>
-</table>
+		</tbody>
+	</table>
+<?php endif; ?>

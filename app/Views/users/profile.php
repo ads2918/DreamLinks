@@ -1,42 +1,51 @@
-<?php if($blocked): ?>
-	<div class="alert alert-warning">
-		User is on  <a href="<?php echo site_url('/user/'. $session_user .'/blocks'); ?>" >block list</a> and as a result you cannot view full profile.
+<?php
+$own = (int) $current_user['id'] === (int) $profile_user['id'];
+$avatar = $profile_user['image'] == '' ? base_url('assets/images/no-image.png') : base_url('uploads/' . $profile_user['image']);
+?>
+<?php if ($blocked): ?>
+	<div class="dl-flash is-error dl-sticker" role="status">
+		<span class="dl-flash-icon"><i class="bi bi-slash-circle"></i></span>
+		<div>This dreamer is on your <a href="<?= site_url('user/' . (int) $session_user . '/blocks'); ?>">block list</a>, so their profile is hidden.</div>
 	</div>
 <?php endif; ?>
-	<div style="float:left;">
-		<a href="<?php echo site_url('/user/'. $profile_user['id']); ?>" ><img class='profile-image'  src="<?php if($profile_user['image'] == ''){ echo  base_url('assets/images/no-image.png'); }else{ echo  base_url('uploads/'. $profile_user['image']); } ?>"></a>
-		<h5><?php echo $profile_user['username']; ?></h5> 
-<?php if(!$blocked): ?>
-	<?php if($current_user['id'] != $profile_user['id']): ?>
-		<?php if(!$blocked): ?>
-			<?php if($link_approved): ?>
-				<i title="Linked" class="bi bi-link-45deg larger-icon"></i></i>
-			<?php elseif($link_pending): ?>
-				<i title="Link request pending" title="Link request pending" class="bi bi-clock larger-icon link-pending"></i>
-			<?php else: ?>
-				<span title="Request Link" class='request-link' link_id="<?php echo $profile_user['id']; ?>">
-					<i class="bi bi-patch-plus-fill larger-icon"></i>
-				</span>
-			<?php endif; ?>
-			<span link_id="<?php echo $profile_user['id'] ?>"  class='profile-block-link pointer red' title="Block"><i class="bi bi-ban"></i></span> 
 
-		<?php endif; ?>	
-	<?php else: ?>
-		<i>You is me</i>
-	<?php endif; ?>
-			<div>
-				<?php echo $profile_user['bio']; ?>
+<section class="dl-profile">
+	<aside class="dl-sticker dl-profile-card">
+		<img class="dl-avatar dl-avatar-lg" src="<?= esc($avatar, 'attr') ?>" alt="">
+		<h1><?= esc($profile_user['username']) ?></h1>
+		<?php if (! $blocked && $profile_user['bio'] != ''): ?>
+			<p><?= esc($profile_user['bio']) ?></p>
+		<?php endif; ?>
+
+		<?php if ($own): ?>
+			<a class="dl-btn is-small is-plain" href="<?= site_url('user/edit'); ?>">Edit profile</a>
+		<?php elseif (! $blocked): ?>
+			<div class="dl-profile-acts">
+				<?php if ($link_approved): ?>
+					<span class="dl-chip is-both"><i class="bi bi-link-45deg"></i> Linked</span>
+				<?php elseif ($link_pending): ?>
+					<span class="dl-chip"><i class="bi bi-clock"></i> Request pending</span>
+				<?php else: ?>
+					<button type="button" class="dl-btn is-small request-link" link_id="<?= (int) $profile_user['id'] ?>"><i class="bi bi-link-45deg"></i> Ask to link</button>
+				<?php endif; ?>
+				<a class="dl-btn is-small is-plain" href="<?= site_url('user/' . (int) $session_user . '/dreamscape?with=' . (int) $profile_user['id']); ?>"><i class="bi bi-diagram-3"></i> Compare dreamscapes</a>
+				<button type="button" class="dl-link-quiet profile-block-link" link_id="<?= (int) $profile_user['id'] ?>"><i class="bi bi-slash-circle"></i> Block</button>
 			</div>
-	</div>
-	<div class="profile-right-wrapper" style="margin: 75px;float:right;width:70%">
-		<?php foreach($recent_dreams as $recent_dream): ?><br>
-			<ul class="list-group">
-			  <li class="list-group-item">
-				<h4><?php echo $recent_dream['title']; ?></h4>
-				<small><b><?php echo date('m/d/Y',strtotime($recent_dream['date'])); ?></b></small>
-				<?php echo $recent_dream['full_description']; ?>		
-			  </li> 
-			</ul>
-		<?php endforeach; ?>
-	</div>
-<?php endif; ?>
+		<?php endif; ?>
+	</aside>
+
+	<?php if (! $blocked): ?>
+		<div class="dl-feed">
+			<?php if (empty($recent_dreams)): ?>
+				<div class="dl-sticker dl-empty">
+					<h2>Nothing shared yet.</h2>
+					<p><?= $own ? 'Dreams you share with your links or everyone show up here.' : 'When ' . esc($profile_user['username']) . ' shares a dream you can see, it shows up here.' ?></p>
+				</div>
+			<?php else: ?>
+				<?php foreach ($recent_dreams as $dream): ?>
+					<?= view('templates/dream-card', ['dream' => $dream, 'viewer_id' => (int) $session_user]) ?>
+				<?php endforeach; ?>
+			<?php endif; ?>
+		</div>
+	<?php endif; ?>
+</section>

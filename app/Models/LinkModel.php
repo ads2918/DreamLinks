@@ -51,10 +51,10 @@ class LinkModel extends Model
 	
 	/* queries all links approved between two users */
 	public function user_approved_links($user_id_1){  
-		$caseStatement = "users.id = CASE WHEN links.request_user_id != '". $user_id_1 ."' THEN links.request_user_id ELSE links.recipient_user_id END";
+		$caseStatement = "users.id = CASE WHEN links.request_user_id != ". (int) $user_id_1 ." THEN links.request_user_id ELSE links.recipient_user_id END";
 		$results = $this->table('links')
 					->select('links.*,username,image,users.id as profile_id')
-					->join('users', $caseStatement, 'left') // Or 'inner', 'right
+					->join('users', $caseStatement, 'left', false) // raw: the id is cast to int above
 					->groupStart()
 						->groupStart()
 							->Where('request_user_id',$user_id_1)
@@ -71,6 +71,15 @@ class LinkModel extends Model
 		return $results;
 	}
 	
+	/** @return list<int> ids of dreamers $user_id is linked with */
+	public function linked_user_ids($user_id){
+		$ids = [];
+		foreach($this->user_approved_links($user_id) as $link){
+			$ids[] = (int) ($link['request_user_id'] == $user_id ? $link['recipient_user_id'] : $link['request_user_id']);
+		}
+		return $ids;
+	}
+
 	/* sets all pending links or current links to decline state */
 	public function decline_links($user_id_1,$user_id_2){
 		return $this->groupStart()
@@ -84,14 +93,14 @@ class LinkModel extends Model
 						->groupEnd()
 						->Where('decline_flag',0)
 					->groupEnd()
-                    ->set(['decline_flag' => 1,'decline_datetime' => date('Y-m-d h:m:s',strtotime('now'))]) // Data to update
+                    ->set(['decline_flag' => 1,'decline_datetime' => date('Y-m-d H:i:s')]) // Data to update
                     ->update(); // Execute the update
 	}
 	
 	public function decline_link_by_id($link_id){
 		return $this->Where('id',$link_id) 
 					->Where('decline_flag',0)
-                    ->set(['decline_flag' => 1,'decline_datetime' => date('Y-m-d h:m:s',strtotime('now'))]) // Data to update
+                    ->set(['decline_flag' => 1,'decline_datetime' => date('Y-m-d H:i:s')]) // Data to update
                     ->update(); // Execute the update
 	}
 }

@@ -8,6 +8,9 @@ use App\Models\TagModel;
 use App\Models\BlockModel; 
 use App\Models\MoonCycleModel;
 use App\Models\PromptModel;
+use App\Models\ResonanceModel;
+use App\Libraries\DreamSymbols;
+use App\Libraries\MoonPhase;
 use App\Services\GeminiService;
 use CodeIgniter\Config\Services;
 class User extends BaseController
@@ -52,7 +55,7 @@ class User extends BaseController
 		$account = $user_model->get_record_by_id($user_to_approve); 
 		$message = '<h1>Welcome to DreamLinks</h1>
 		<p>Thank you for your intrest in dreamlinks. 
-		Your access request for user <b>'. $account['username'] .'</b> has been approved.
+		Your access request for user <b>'. esc($account['username']) .'</b> has been approved.
 		<a target="_blank" href="'.  site_url('/user/login') .'">Click here</a> to login.</p>Sincerely,<br>DreamLinks Team';
 		$sent = $this->send_email($account['email'],'Welcome to DreamLinks',$message,1);
 		return redirect()->to('admin/users');
@@ -134,21 +137,21 @@ class User extends BaseController
 			if(!empty($latest_dream_response)){
 				$data['has_recent_prompt'] = 1;
 				$json_decode =  json_decode($latest_dream_response[0]['json_response']);
+				// AI output repeats dream text back, so it is escaped like any user input
+				$escape_all = fn ($list) => array_map(fn ($line) => esc((string) $line), (array) $list);
 				if(isset($json_decode->patterns)){
-					$data['dream_recent_patterns'] = implode(', ',$json_decode->patterns);
+					$data['dream_recent_patterns'] = implode(', ',$escape_all($json_decode->patterns));
 				}
-				
+
 				if(isset($json_decode->symbols)){
-					$data['dream_recent_symbols'] = implode(', ',$json_decode->symbols);
+					$data['dream_recent_symbols'] = implode(', ',$escape_all($json_decode->symbols));
 				}
-				
-				if(isset($json_decode->overview) && is_array($json_decode->overview)){
-					$data['dream_recent_overview'] = implode('<br>',$json_decode->overview);
-				}elseif(isset($json_decode->overview) && !is_array($json_decode->overview)){
-					$data['dream_recent_overview'] = $json_decode->overview;
+
+				if(isset($json_decode->overview)){
+					$data['dream_recent_overview'] = implode('<br>',$escape_all($json_decode->overview));
 				}
 				if(isset($json_decode->significant_plantery_or_moons_syncing_with_dream_patterns)){
-					$data['dream_recent_plantery_moon_events'] = implode('<br>',$json_decode->significant_plantery_or_moons_syncing_with_dream_patterns);
+					$data['dream_recent_plantery_moon_events'] = implode('<br>',$escape_all($json_decode->significant_plantery_or_moons_syncing_with_dream_patterns));
 				}
  
 				$data['dream_recent_prompt_datetime'] = date('m/d/Y',strtotime($latest_dream_response[0]['prompt_datetime']));
@@ -163,61 +166,39 @@ class User extends BaseController
 	}
 	
 	public function dream_analysis(){
-		$data['title'] = ucfirst('My Dream Analysis'); 
-		$session = \Config\Services::session();
-		$prompt_model = model(PromptModel::class);	
-		$user_past_prompts = $prompt_model->get_user_prompts($session->user_id,'dreams',60);
-		$data['user_past_prompts'] = $user_past_prompts;
-		
-		$tags_model = model(TagModel::class);
-		$top_tags = $tags_model->top_10_tags($session->user_id);
-		$tag_desc = array();
-		$tag_freq = array();
-		$tags_found = 0;
-		if(!empty($top_tags)){
-			$tags_found = 1;
-			foreach($top_tags as $tag){
-				$tag_desc[] = ucfirst($tag['tag']);
-				$tag_freq[] = $tag['frequency'];
-			}
-			
-			$custom_js = "
-			<script>
-			const ctx = document.getElementById('topTagsChart');
-			new Chart(ctx, {
-			type: 'bar',
-			data: {
-			  labels: ". json_encode($tag_desc) .",
-			  datasets: [{
-				label: 'Most Frequent Tags',
-				backgroundColor: [ // Array of colors for individual bars
-					'rgba(255, 99, 132, 0.6)',
-					'rgba(54, 162, 235, 0.6)',
-					'rgba(75, 192, 192, 0.6)'
-				],
-				data: ". json_encode($tag_freq) .",
-				borderWidth: 1
-			  }]
-			},
-			options: {
-			  scales: {
-				y: {
-				  beginAtZero: true
-				}
-			  }
-			}
-			});
-	 
-			</script>
-			";
-			$data['custom_js'][] = 'analysis.js';
+		$user_id = (int) $this->session->user_id;
+		$data['title'] = 'Readings';
+
+		$readings = array_values(array_filter(array_map(
+			[PromptModel::class, 'reading'],
+			model(PromptModel::class)->get_user_prompts($user_id, 'dreams', 60)
+		)));
+		foreach ($readings as $k => $reading) {
+			$readings[$k]['moon'] = MoonPhase::name($reading['datetime']);
+			$readings[$k]['moon_phase'] = MoonPhase::phase($reading['datetime']);
 		}
-		$data['page_js'][] = 'chart.js';
-		$data['tags_found'] = $tags_found;
+		$data['readings'] = $readings;
+
+		// Which symbols keep coming back, from the dreams themselves rather than the AI.
+		$dream_model = model(DreamModel::class);
+		$dreams = $dream_model->where('created_by', $user_id)->findAll();
+		$tags = model(TagModel::class)->tags_for_dreams(array_column($dreams, 'id'));
+		$counts = [];
+		foreach ($dreams as $dream) {
+			foreach (DreamSymbols::forDream($dream['title'], $dream['full_description'], $tags[$dream['id']] ?? []) as $s) {
+				$counts[$s] = ($counts[$s] ?? 0) + 1;
+			}
+		}
+		arsort($counts);
+		$data['top_symbols'] = array_slice($counts, 0, 8, true);
+		$data['dream_count'] = count($dreams);
+		$data['waiting'] = count($dream_model->get_unprompted_dreams_by_user_id($user_id));
+		$data['enabled'] = (bool) ($this->current_user['ai_analysis_enabled'] ?? false);
+		$data['tonight'] = date('Y-m-d');
+
 		return view('templates/header', $data)
-			.view('users/analysis',$data)
-			. view('templates/footer',$data)
-			. $custom_js; 
+			. view('users/analysis', $data)
+			. view('templates/footer', $data);
 	}
 	public function aiUserDreamRun(){
 		$user_model = model(UserModel::class);
@@ -357,10 +338,22 @@ class User extends BaseController
 			}
 		}
 		
-		if($link_approved || $user_id == $session->user_id){
-			$recent_dreams = $dream_model->get_dreams_by_status($user_id,array('public','friends'),50);
-		}else{
-			$recent_dreams = $dream_model->get_dreams_by_status($user_id,array('public'),50);
+		$viewer_id = (int) $session->user_id;
+		$recent_dreams = $dream_model->visible_to($viewer_id, model(LinkModel::class)->linked_user_ids($viewer_id), [(int) $user_id])->findAll(50);
+		if((int) $user_id === $viewer_id){
+			// your own profile shows what others can see, not your private dreams
+			$recent_dreams = array_values(array_filter($recent_dreams, fn ($d) => $d['visibility'] !== 'private'));
+		}
+		$dream_ids = array_column($recent_dreams, 'id');
+		$tags = model(TagModel::class)->tags_for_dreams($dream_ids);
+		$resonance = model(ResonanceModel::class);
+		$counts = $resonance->counts_for($dream_ids);
+		$mine = $resonance->marked_by($viewer_id, $dream_ids);
+		foreach($recent_dreams as $key => $dream){
+			$recent_dreams[$key]['symbols'] = DreamSymbols::forDream($dream['title'], $dream['full_description'], $tags[$dream['id']] ?? []);
+			$recent_dreams[$key]['moon'] = MoonPhase::name($dream['date']);
+			$recent_dreams[$key]['resonance'] = $counts[$dream['id']] ?? 0;
+			$recent_dreams[$key]['resonated'] = in_array((int) $dream['id'], $mine, true);
 		}
 		
 		$data['profile_user'] = $profile_user;
@@ -456,11 +449,13 @@ class User extends BaseController
 					$tag_list = array();
 					if(!empty($tags)){
 						foreach($tags as $tag_row){
-							$tag_list[] = '<span class="badge badge-dark">'. $tag_row['tag'] .'</span>';
+							$tag_list[] = '<span class="badge badge-dark">'. esc($tag_row['tag']) .'</span>';
 						}
 					}
+					// DataTables renders these as HTML, so every user-written value is escaped here
 					$dreams[$key]['date'] = date('m/d/Y',strtotime($dream['date']));
-					$dreams[$key]['full_description'] = substr($dream['full_description'],0,50) .'...';
+					$dreams[$key]['title'] = esc($dream['title']);
+					$dreams[$key]['full_description'] = esc(mb_substr($dream['full_description'],0,50)) .'...';
 					unset($dreams[$key]['slug']);
 					unset($dreams[$key]['created_by']);
 					unset($dreams[$key]['created_datetime']);
@@ -468,7 +463,7 @@ class User extends BaseController
 					$dreams[$key]['links'] = '<a href="'. site_url('dream/edit/'. $dream['id']) .'">
 							<i class="bi bi-pencil-square"></i>
 						</a> 
-						<span data-toggle="modal" data-target="#exampleModal" title="'. $dream['title'] .'" class="delete-dream" href="'. site_url('dream/delete/'. $dream['id']) .'">
+						<span data-toggle="modal" data-target="#exampleModal" title="'. esc($dream['title'], 'attr') .'" class="delete-dream" href="'. site_url('dream/delete/'. $dream['id']) .'">
 							<i class="bi bi-trash"></i>
 						</span>';
 					
@@ -502,6 +497,8 @@ class User extends BaseController
 			$search = $_POST['search']['value'];
 		}
 		$users_found_html = array();
+		$users_found = array();
+		$total_users_found = array();
 		$total_records_val = 0;
 		$start = '' ? 0 : (int)$_POST['start'];
 		$length = '' ? 10 : (int)$_POST['length'];
@@ -561,10 +558,10 @@ class User extends BaseController
 					$profile_image =  base_url('uploads/'. $user_record['image']); 
 				} 
 				$html = '';
-				$html .= '<a href="'. site_url('/user/'. $user_record['id']) .'" ><img class="profile-image"  src="'. $profile_image . '"></a>
+				$html .= '<a href="'. site_url('/user/'. (int) $user_record['id']) .'" ><img class="profile-image"  src="'. esc($profile_image, 'attr') . '"></a>
 						<div>
-							'. $user_record['username'] .'
-						</div>	
+							'. esc($user_record['username']) .'
+						</div>
 						<div>';
 				if($session->user_id != $user_record['id']){
 					if($user_record['link_approved']){
@@ -572,14 +569,14 @@ class User extends BaseController
 					}elseif($user_record['link_pending']){
 						$html .='<i title="Link request pending" title="Link request pending" class="bi bi-clock larger-icon link-pending"></i>';
 					}else{
-						$html .'<span title="Request Link" class=\'request-link\' link_id="'. $user_record['id'] .'">
+						$html .= '<span title="Request Link" class=\'request-link\' link_id="'. (int) $user_record['id'] .'">
 							<i class="bi bi-patch-plus-fill larger-icon"></i>
 						</span>';
-					}	
+					}
 				}else{
 					$html .= '<strong>You</strong>';
 				}
-				$html .'</div>';
+				$html .= '</div>';
 				$total_records_val++;
 				$users_found_html[] = array('username' => $html);
 			}
@@ -697,18 +694,20 @@ class User extends BaseController
 		helper('form');
 		$error = 0;
 		$session = \Config\Services::session();
-		$data = $this->request->getPost(['email', 'current_password','email','new_password','username','profile_image','bio','ai_analysis_enabled','default_dream_visibility']);
- 
+		$data = $this->request->getPost(['email', 'current_password','email','new_password','username','profile_image','bio','ai_analysis_enabled','default_dream_visibility','reminder_enabled','reminder_hour','timezone']);
+
         if (!$this->validateData($data, [
 			'new_password'  => 'max_length[30]',
 			'email'  => 'required|max_length[50]|valid_email|min_length[10]|is_unique[users.email,id,'. $session->user_id .']',
 			'username'  => 'max_length[50]|min_length[4]|is_unique[users.username,id,'. $session->user_id .']',
 			'bio' => 'max_length[200]|min_length[1]',
 			'default_dream_visibility' => 'required|in_list[private,friends,public]',
+			'reminder_hour' => 'permit_empty|integer|greater_than_equal_to[4]|less_than_equal_to[12]',
 			'image' => 'is_image[image]|mime_in[image,image/jpg,image/jpeg,image/png]|max_size[image,100]',
         ])){
 			return $this->edit(1);
 		}
+		$timezone = in_array($data['timezone'] ?? '', \DateTimeZone::listIdentifiers(), true) ? $data['timezone'] : 'America/Indianapolis';
 		$upload_path = $this->upload_path;
 		$file_name = '';	
 		$model = model(UserModel::class);
@@ -730,13 +729,12 @@ class User extends BaseController
 		
 		$update_image = 0;
 		$img = $this->request->getFile('image');
-		if($img->isValid() && !$img->hasMoved()) {
-			$file_name = $_FILES['image']['name'];
-			$file_type = $_FILES['image']['type'];
-			$file_size = $_FILES['image']['size'];
-			$file_tmp_name = $_FILES['image']['tmp_name'];
-			$file_error = $_FILES['image']['error'];	
-			if(in_array($file_type,array('image/jpeg','image/png'))){
+		if($img && $img->isValid() && !$img->hasMoved()) {
+			// getMimeType() reads the file itself; $_FILES['type'] is whatever the browser claims
+			$file_type = $img->getMimeType();
+			$file_size = $img->getSize();
+			$file_tmp_name = $img->getTempName();
+			if(in_array($file_type,array('image/jpeg','image/png'), true) && @getimagesize($file_tmp_name)){
 				if($file_size <= 2097152){
 					$newName = $img->getRandomName();
 					$file_name = $newName  . '.jpg';
@@ -761,24 +759,20 @@ class User extends BaseController
 			return $this->edit(1);
 		}else{
 			$model = model(UserModel::class);
-			if(!$reset_password){
-				$model->save([
-					'username' => $data['username'],
-					'bio' => $data['bio'],
-					'ai_analysis_enabled' => $ai_analysis,
-					'default_dream_visibility' => $data['default_dream_visibility'],
-					'id' => $session->user_id,
-				]);
-			}else{
-				$model->save([
-					'username' => $data['username'],
-					'id' => $session->user_id,
-					'bio' => $data['bio'],
-					'ai_analysis_enabled' => $ai_analysis,
-					'default_dream_visibility' => $data['default_dream_visibility'],
-					'password' => password_hash($data['new_password'], PASSWORD_DEFAULT),
-				]);
+			$fields = [
+				'id' => $session->user_id,
+				'username' => $data['username'],
+				'bio' => $data['bio'],
+				'ai_analysis_enabled' => $ai_analysis,
+				'default_dream_visibility' => $data['default_dream_visibility'],
+				'reminder_enabled' => $data['reminder_enabled'] ? 1 : 0,
+				'reminder_hour' => (int) ($data['reminder_hour'] ?: 8),
+				'timezone' => $timezone,
+			];
+			if($reset_password){
+				$fields['password'] = password_hash($data['new_password'], PASSWORD_DEFAULT);
 			}
+			$model->save($fields);
 			
 			if($update_image){
 				//remove original image if one was linked previously
@@ -838,7 +832,8 @@ class User extends BaseController
 				return redirect()->back()->withInput();
 			}
 
-			// 3. Success! Set session
+			// 3. Success! New session id so a session id planted before login is useless
+			session()->regenerate(true);
 			$user_data = [
 				'user_id'   => $user['id'],
 				'email'     => $user['email'],

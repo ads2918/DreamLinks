@@ -33,35 +33,44 @@ class DreamModel extends Model
 		}
     }
 	
+	/* the feed: public dreams plus linked dreamers' "friends" dreams, newest first */
 	public function get_front_page_dreams($limit = 0,$random = 0,$linked_friend_ids = array(),$current_user_id = false){
- 
-		if(empty($linked_friend_ids)){
-			$this->groupStart();
-				$this->Where('visibility','public');
-			$this->groupEnd();
-		}else{
-			$this->groupStart();
-				$this->groupStart();	
-					$this->whereIn('created_by',$linked_friend_ids);
-					$this->where('visibility','friends');
-				$this->groupEnd();
-				$this->orGroupStart();
-					$this->orWhere('visibility','public');
-				$this->groupEnd();	
-			$this->groupEnd();
+		return $this->visible_to((int) $current_user_id, $linked_friend_ids, null, false)
+					->limit($limit)
+					->findAll();
+	}
+
+	/**
+	 * Starts a query for the dreams $viewer_id is allowed to see: public dreams, "friends" dreams
+	 * by linked dreamers, and with $include_own every one of the viewer's own dreams.
+	 * Leaves out deleted accounts and anyone either side has blocked.
+	 * $owner_ids narrows it to those dreamers. Chain ->findAll() on the result.
+	 */
+	public function visible_to(int $viewer_id, array $linked_ids, ?array $owner_ids = null, bool $include_own = true){
+		$linked_ids = array_map('intval', $linked_ids);
+		$this->select('dreams.id, dreams.title, dreams.full_description, dreams.date, dreams.visibility, dreams.created_by, users.username, users.image')
+			 ->join('users', 'users.id = dreams.created_by')
+			 ->where('users.deleted', 0)
+			 ->groupStart()
+				->where('dreams.visibility', 'public');
+		if(!empty($linked_ids)){
+			$this->orGroupStart()
+					->whereIn('dreams.created_by', $linked_ids)
+					->where('dreams.visibility', 'friends')
+				 ->groupEnd();
 		}
- 
-		$this->where("(SELECT count(*) FROM blocks WHERE 
-		((blocked_by_user_id = created_by AND blocked_user_id = ". $current_user_id .") OR (blocked_user_id = created_by AND blocked_by_user_id = ". $current_user_id .")) AND disabled_flag = 0) = 0", NULL, FALSE);
-		
-		if($random){
-		   $this->orderBy('id', 'RANDOM');
+		if($include_own){
+			$this->orWhere('dreams.created_by', $viewer_id);
 		}
-		$this->join('users', 'users.id = created_by', 'left');
-		$this->where('deleted',0);
-		$this->limit($limit);
-		return $this->findAll();	
-		
+		$this->groupEnd();
+		// $viewer_id is typed int, so it is safe inside the raw subquery
+		$this->where('NOT EXISTS (SELECT 1 FROM blocks b WHERE b.disabled_flag = 0 AND (
+			(b.blocked_by_user_id = dreams.created_by AND b.blocked_user_id = ' . $viewer_id . ') OR
+			(b.blocked_user_id = dreams.created_by AND b.blocked_by_user_id = ' . $viewer_id . ')))', null, false);
+		if($owner_ids !== null){
+			$this->whereIn('dreams.created_by', $owner_ids ? array_map('intval', $owner_ids) : [0]);
+		}
+		return $this->orderBy('dreams.date', 'DESC')->orderBy('dreams.id', 'DESC');
 	}
 	
 	public function get_dreams_by_status($user_id = 0,$status= 'public',$limit = 0,$random = 0){

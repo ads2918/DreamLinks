@@ -17,7 +17,8 @@ class GeminiService
         }
 		
 		$this->guzzle = new GuzzleClient([
-            'verify' => false,  // Disables cert check (use ONLY locally!)
+            // Certificate checks stay on. A local PHP with no CA bundle can set gemini.verify_ssl = false in .env.
+            'verify' => env('gemini.verify_ssl', 'true') !== 'false',
             'timeout' => 60,
         ]);
 		

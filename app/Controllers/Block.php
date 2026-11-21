@@ -9,7 +9,7 @@ class Block extends BaseController
 	public function unblock($id){	
 		$model = model(BlockModel::class);
 		$block_record = $model->find($id);
-		if($block_record['blocked_by_user_id'] && $this->session->user_id){
+		if($block_record && $block_record['blocked_by_user_id'] == $this->session->user_id){
 			$unblocked = $model->unblock($id,$this->session->user_id);
 			if($unblocked){
 				return redirect()->back();
@@ -23,7 +23,7 @@ class Block extends BaseController
 			$model->save([
 				'blocked_user_id' => $id,
 				'blocked_by_user_id' => $this->session->user_id,
-				'blocked_datetime' => date('Y-m-d h:i:s',strtotime('now')),
+				'blocked_datetime' => date('Y-m-d H:i:s'),
 			]);	
 		}	
  

@@ -17,7 +17,7 @@
 	  AI analysis is not enabled.  <a href="<?= base_url('user/edit'); ?>">Click here</a> to enabled it.
 	</div>
 <?php endif; ?>
-<i class="bi bi-circle-fill"></i> <i><?php echo $next_moon_cycle[0]['cycle']; ?></i>
+<i class="bi bi-circle-fill"></i> <i><?php echo esc($next_moon_cycle[0]['cycle'] ?? ''); ?></i>
 <table class='table table-sm' id="dreamsTable">
 		<thead>
 			<tr>

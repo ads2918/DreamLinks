@@ -1,8 +1,8 @@
  /* tags field */
 if($('input[name=tags]').length){
 	var input = document.querySelector('input[name=tags]');
-	new Tagify(input,{
-			pattern: /^[A-Za-z_1-9 ]{1,25}$/, // 
+	window.dlTagify = new Tagify(input,{
+			pattern: /^[\p{L}\p{N} _'-]{1,25}$/u,
 			maxTags: 15, // Limits the number of tags to 10
 	});
 }
@@ -39,8 +39,9 @@ $(document).ready(function() {
 		$link_id = $(this).attr('link_id');
 		$link = $(this);
         $.ajax({
-            url: "/user/block-link/"+ $link_id, 
-            data: {},      
+            url: "/user/block-link/"+ $link_id,
+            method: "POST",
+            data: {},
             success: function(response) {
                if($.isNumeric(response)){
 				   response = response - 1;
@@ -81,12 +82,6 @@ $(document).ready(function() {
             }
         });
     });
-const toggler = document.querySelector('.navbar-toggler');
-const secondaryMenu = new bootstrap.Collapse('#navbarCollapse', { toggle: false });
-
-toggler.addEventListener('click', function () {
-    secondaryMenu.toggle();
-});	
 });
  
 

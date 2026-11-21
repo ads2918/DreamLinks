@@ -46,6 +46,24 @@
 						  </select>
 						  <label class="form-label" for="form3Example4cg">Dream visibility default</label> <small>(will automatically select this when entering dreams.)</small>
 						</div>
+						<?php $reminder_on = $_POST ? (bool) set_value('reminder_enabled') : (bool) ($current_user['reminder_enabled'] ?? 0); ?>
+						<?php $reminder_hour = (int) ($_POST ? set_value('reminder_hour') : ($current_user['reminder_hour'] ?? 8)); ?>
+						<div class="form-check">
+						  <input name="reminder_enabled" class="form-check-input" type="checkbox" value="1" id="reminder_enabled"<?= $reminder_on ? ' checked' : '' ?>>
+						  <label class="form-check-label" for="reminder_enabled">
+							Email me a morning reminder to log my dreams
+						  </label>
+						</div>
+						<div class="form-outline mb-4">
+						  <label class="form-label" for="reminder_hour">Remind me at</label>
+						  <select class="form-control" name="reminder_hour" id="reminder_hour">
+							<?php for ($h = 4; $h <= 12; $h++): ?>
+								<option value="<?= $h ?>"<?= $reminder_hour === $h ? ' selected' : '' ?>><?= $h === 12 ? '12:00 pm' : $h . ':00 am' ?></option>
+							<?php endfor; ?>
+						  </select>
+						  <small>Your time zone: <span data-dl-timezone-label><?= esc($current_user['timezone'] ?? 'America/Indianapolis') ?></span>. Skipped on mornings you've already logged a dream.</small>
+						  <input type="hidden" name="timezone" value="<?= esc($current_user['timezone'] ?? 'America/Indianapolis') ?>" data-dl-timezone>
+						</div>
 						<div class="d-flex justify-content-center">
 						  <button  type="submit" data-mdb-button-init
 							data-mdb-ripple-init class="btn btn-success btn-block btn-lg gradient-custom-4 text-body">Save</button>

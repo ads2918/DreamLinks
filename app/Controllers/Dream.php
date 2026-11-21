@@ -1,187 +1,176 @@
 <?php
 
 namespace App\Controllers;
-use App\Models\DreamModel; 
-use App\Models\TagModel; 
+use App\Models\DreamModel;
+use App\Models\TagModel;
+use App\Models\LinkModel;
+use App\Models\ResonanceModel;
+use App\Libraries\DreamSymbols;
 class Dream extends BaseController
 {
- 
-	public function index(): string{
-		// $data['title'] = ucfirst('Home'); 
-		// return view('templates/header', $data)
-			// . view('pages/home')
-			// . view('templates/footer');
-	}
-	
+	private const RULES = [
+		'title'  => 'required|max_length[100]|min_length[1]',
+		'full_description'  => 'required|trim|max_length[700]|min_length[1]',
+		'date'  => 'trim|required|valid_date',
+		'tags' => 'required',
+		'visibility' => 'required|in_list[public,private,friends]',
+	];
+
 	public function editSubmit($id){
 	    helper('form');
-		helper('text'); // For convert_accented_characters
-		helper('url');  // For url_title
 		$data = $this->request->getPost(['date', 'title','full_description','tags','visibility']);
-		$session = \Config\Services::session();
-		$dream_model = model(DreamModel::class);	
-		$dream_model = $dream_model->find($id);
-		if($dream_model['created_by'] != $this->current_user['id']){
+		$dream = model(DreamModel::class)->find($id);
+		if(!$dream || $dream['created_by'] != $this->current_user['id']){
 			return redirect()->to('');
 		}
-		if (! $this->validateData($data, [
-            'title'  => 'required|max_length[100]|min_length[1]',
-			'full_description'  => 'required|trim|max_length[700]|min_length[1]',
-			'date'  => 'trim|required|valid_date',
-			'tags' => 'required',
-			'visibility' => 'required|in_list[public,private,friends]',
-        ])){
-            // The validation fails, so returns the form.
+		if (! $this->validateData($data, self::RULES)){
             return $this->edit($id,1);
         }
 
-		$tags = json_decode($data['tags']);
-		if(count($tags) > 15){  
+		$tags = $this->parse_tags($data['tags']);
+		if(count($tags) > 15){
 			session()->setFlashdata('error', 'Cannot use more than 15 tags.');
-			return $this->edit($id);
+			return $this->edit($id,1);
 		}
-			
-		$post = $this->validator->getValidated(); 
-		$string = $post['title'];
+
 		$model = model(DreamModel::class);
 		$model->save([
 			'id' =>  $id,
-			'date'	=> $this->request->getPost('date'),
-			'title'	=> $this->request->getPost('title'), // Save raw, escape on output
-			'full_description' => $this->request->getPost('full_description'),
-			'visibility' => $this->request->getPost('visibility'),
-        ]);	
-		
-		/* save update tags */
-		$model = model(TagModel::class);
-		$model->delete_records_by_dream_id($id);
-		if(!empty($tags)){
-			foreach($tags as $tag){
-				$model->save([
-					'tag' => substr($tag->value,0,25),
-					'dream_id' => $id,
-				]);	
-			}
-		}
-		
-		$data['error'] = 0;
+			'date'	=> $data['date'],
+			'title'	=> $data['title'], // Save raw, escape on output
+			'full_description' => $data['full_description'],
+			'visibility' => $data['visibility'],
+        ]);
+		$this->save_tags($id, $tags);
+
 		session()->setFlashdata('success', 'Dream has been updated.');
-		return redirect()->to('../user/'. $session->user_id .'/dreams');
+		return redirect()->to('user/'. $this->session->user_id .'/dreams');
 	}
-	
+
 	public function edit($id,$error = 0){
 		helper('form');
 		$model = model(DreamModel::class);
 		$data = $model->find($id);
-		if($data['created_by'] != $this->current_user['id']){
+		if(!$data || $data['created_by'] != $this->current_user['id']){
 			return redirect()->to('');
 		}
-		$header_data['title'] = ucfirst('Edit Dream'); 
-		$data['error'] = $error;				
+		$header_data['title'] = 'Edit Dream';
+		$header_data['page_js'] = 'dream-form.js';
+		$data['error'] = $error;
 		$tag_arr = array();
-		if(!isset($_POST['tags'])){	
+		if($this->request->getPost('tags') === null){
 			$tag_model = model(TagModel::class);
-			$tags = $tag_model->tags_by_dream_id($id);
-			$tag_arr = array();
-			foreach($tags as $tag){
+			foreach($tag_model->tags_by_dream_id($id) as $tag){
 				$tag_arr[] = $tag['tag'];
 			}
-		}elseif(isset($_POST['tags'])){
-			$tags = json_decode($_POST['tags']);
-			if(!empty($tags)){
-				foreach($tags as $tag){
-					$tag_arr[] = $tag->value;
-				}
-			}
+		}else{
+			$tag_arr = $this->parse_tags($this->request->getPost('tags'));
 		}
-	 
-		// $data['visibility'] = $data['visibility'];
 		$data['tags'] = implode(',',$tag_arr);
+		$data['lexicon'] = DreamSymbols::toJson();
 		return view('templates/header',$header_data)
 			. view('dreams/add-edit',$data)
-			. view('templates/footer');
+			. view('templates/footer',$header_data);
 	}
-	
+
 	public function delete(?int $id = null){
 		$deleted = false;
-		$session = \Config\Services::session();
 		$model = model(DreamModel::class);
 		$data = $model->find($id);
-		if($data['created_by'] == $session->user_id){
-			$model2 = model(DreamModel::class);
-			$deleted = $model2->delete_record_by_id($id);
+		if($data && $data['created_by'] == $this->session->user_id){
+			$deleted = $model->delete_record_by_id($id);
+			if($deleted){
+				model(TagModel::class)->delete_records_by_dream_id($id);
+				model(ResonanceModel::class)->where('dream_id', $id)->delete();
+			}
 		}
 		if($deleted){
 			session()->setFlashdata('success', 'Dream has been deleted.');
 		}else{
 			session()->setFlashdata('error', 'Dream could not be deleted.');
 		}
-		return redirect()->to('../user/'. $data['created_by'] .'/dreams');
+		return redirect()->to('user/'. $this->session->user_id .'/dreams');
 	}
-	
+
 	public function add($error = 0){
 		helper('form');
-		$data['title'] = ucfirst('Add Dream'); 
+		$data['title'] = 'Log a Dream';
 		$data['error'] = $error;
-		$data['visibility'] = '';
-		if(!isset($tags)){
-			$data['tags'] = '';
-		}
+		$data['visibility'] = $this->current_user['default_dream_visibility'] ?? 'private';
+		$data['tags'] = '';
+		$data['lexicon'] = DreamSymbols::toJson();
+		$data['page_js'] = 'dream-form.js';
 		return view('templates/header', $data)
-			. view('dreams/add-edit')
-			. view('templates/footer');
-
+			. view('dreams/add-edit', $data)
+			. view('templates/footer', $data);
     }
-	
+
 	public function addSubmit(){
 	    helper('form');
-		helper('text'); // For convert_accented_characters
-		helper('url');  // For url_title
 		$data = $this->request->getPost(['date', 'title','full_description','tags','visibility']);
-		$session = \Config\Services::session();
-		
-		if (! $this->validateData($data, [
-            'title'  => 'required|max_length[100]|min_length[1]',
-			'full_description'  => 'required|trim|max_length[700]|min_length[1]',
-			'date'  => 'trim|required|valid_date',
-			'tags' => 'required',
-			'visibility' => 'required|in_list[public,private,friends]',
-        ])){
-            // The validation fails, so returns the form.
+
+		if (! $this->validateData($data, self::RULES)){
             return $this->add(1);
         }
- 
-		$post = $this->validator->getValidated(); 
-		$string = $post['title'];
-		$model = model(DreamModel::class);
-		$model->save([
-			'created_by' => $session->user_id,
-			'date'	=> $this->request->getPost('date'),
-			'title'	=> $this->request->getPost('title'), // Save raw, escape on output
-			'full_description' => $this->request->getPost('full_description'),
-			'visibility' => $this->request->getPost('visibility'),
-        ]);	
-		
-		$dream_id = $model->insertID;
-		$tags = json_decode($data['tags']);
+		$tags = $this->parse_tags($data['tags']);
 		if(count($tags) > 15){
 			session()->setFlashdata('error', 'Cannot use more than 15 tags.');
-            return $this->edit(1);
+            return $this->add(1);
 		}
-		
-		/* save update tags */
-		$dream_tag = model(TagModel::class);
-		if(!empty($tags)){
-			foreach($tags as $tag){
-				$dream_tag->save([
-					'tag' => esc($tag->value),
-					'dream_id' => $dream_id,
-				]);	
+
+		$model = model(DreamModel::class);
+		$model->save([
+			'created_by' => $this->session->user_id,
+			'date'	=> $data['date'],
+			'title'	=> $data['title'], // Save raw, escape on output
+			'full_description' => $data['full_description'],
+			'visibility' => $data['visibility'],
+        ]);
+		$this->save_tags($model->insertID, $tags);
+
+		session()->setFlashdata('success', 'Dream has been logged.');
+		return redirect()->to('user/'. $this->session->user_id .'/dreams');
+	}
+
+	/* "I've dreamt this too": toggles the viewer's mark on a dream they can see, returns JSON */
+	public function resonate(int $id){
+		$viewer_id = (int) $this->session->user_id;
+		$linked = model(LinkModel::class)->linked_user_ids($viewer_id);
+		$dream = model(DreamModel::class)->visible_to($viewer_id, $linked, null, false)
+										 ->where('dreams.id', $id)
+										 ->first();
+		if(!$dream || (int) $dream['created_by'] === $viewer_id){
+			return $this->response->setStatusCode(404)->setJSON(['error' => 'Dream not found.']);
+		}
+		$resonance = model(ResonanceModel::class);
+		$on = $resonance->toggle($id, $viewer_id);
+		return $this->response->setJSON(['on' => $on, 'count' => $resonance->count_for($id)]);
+	}
+
+	/** Tagify posts JSON like [{"value":"ocean"}]; without JavaScript it is plain "a,b". @return list<string> */
+	private function parse_tags($json){
+		$decoded = json_decode((string) $json);
+		if(!is_array($decoded)){
+			$decoded = array_map(fn ($v) => (object) ['value' => $v], explode(',', (string) $json));
+		}
+		$tags = [];
+		foreach($decoded as $tag){
+			$value = trim(mb_substr((string) ($tag->value ?? ''), 0, 25));
+			if($value !== ''){
+				$tags[] = $value;
 			}
 		}
-		
-		$data['error'] = 0;
-		session()->setFlashdata('success', 'Dream has been logged.');
-		return redirect()->to('../user/'. $session->user_id .'/dreams');
+		return array_values(array_unique($tags));
+	}
+
+	private function save_tags($dream_id, array $tags){
+		$tag_model = model(TagModel::class);
+		$tag_model->delete_records_by_dream_id($dream_id);
+		foreach($tags as $tag){
+			$tag_model->save([
+				'tag' => $tag,
+				'dream_id' => $dream_id,
+			]);
+		}
 	}
 }

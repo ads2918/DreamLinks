@@ -1,5 +1,6 @@
 $(document).ready(function() {	
-	$('.request-link').on('click', function() {
+	// delegated: the rows arrive after page load from the DataTables request
+	$(document).on('click', '.request-link', function() {
 		$link_id = $(this).attr('link_id');
 		$link = $(this);
         $.ajax({

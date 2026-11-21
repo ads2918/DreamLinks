@@ -50,7 +50,7 @@ $(document).ready(function() {
 		$title = $(this).attr('title');
 		bootbox.confirm('<strong>Are you sure you want to delete dream?</strong><br>', function (result) {
 			if(result){
-				$.get($href, function(data){
+				$.post($href, function(data){
 					dataTableVar.ajax.reload(); //refresh datatable
 				});
 			}

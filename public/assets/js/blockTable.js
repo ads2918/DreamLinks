@@ -40,7 +40,7 @@ $(".unblock").click(function() {
 	$href = $(this).attr('href');
 	bootbox.confirm('<strong>Are you sure you want to unblock dreamer?</strong><br>', function (result) {
 		if(result){
-			window.location = $href;
+			$.post($href).always(function(){ window.location.reload(); });
 		}
 	});
 });

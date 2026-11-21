@@ -62,7 +62,8 @@ class Security extends BaseConfig
      *
      * Defaults to two hours (in seconds).
      */
-    public int $expires = 7200;
+    // 0 = lasts until the browser closes, so a dream form left open overnight still submits.
+    public int $expires = 0;
 
     /**
      * --------------------------------------------------------------------------
@@ -71,7 +72,8 @@ class Security extends BaseConfig
      *
      * Regenerate CSRF Token on every submission.
      */
-    public bool $regenerate = true;
+    // Off so AJAX calls and a second open tab keep working with the token they loaded with.
+    public bool $regenerate = false;
 
     /**
      * --------------------------------------------------------------------------

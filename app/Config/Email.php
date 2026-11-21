@@ -35,10 +35,11 @@ class Email extends BaseConfig
         parent::__construct();
 
         // This pulls from .env without hardcoding values here
-        $this->SMTPHost = env('mail.SMTPHost');
-        $this->SMTPUser = env('mail.SMTPUser');
-        $this->SMTPPass = env('mail.SMTPPass');
-        $this->SMTPPort = (int) env('mail.SMTPPort');
-        $this->mailPath = env('mail.mailPath');
+        // Defaults keep a .env without mail settings from crashing every page that loads this config.
+        $this->SMTPHost = (string) env('mail.SMTPHost', 'smtp.gmail.com');
+        $this->SMTPUser = (string) env('mail.SMTPUser', '');
+        $this->SMTPPass = (string) env('mail.SMTPPass', '');
+        $this->SMTPPort = (int) env('mail.SMTPPort', 465);
+        $this->mailPath = (string) env('mail.mailPath', '/usr/sbin/sendmail');
     }
 }

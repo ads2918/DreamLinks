@@ -1,44 +1,67 @@
-<section>
-	<form action="" method="post">
+<?php
+$editing = isset($id);
+$posted = (bool) $_POST;
+$val = function (string $field, $saved) use ($posted) {
+	return esc($posted ? set_value($field) : ($saved ?? ''));
+};
+$visibility = $posted ? set_value('visibility') : ($visibility ?? 'private');
+?>
+<section class="dl-dream-form">
+	<header class="dl-page-head">
+		<div class="dl-eyebrow"><?= $editing ? 'Edit dream' : 'Log a dream' ?></div>
+		<h1><?= $editing ? 'Fix the details.' : 'What did you see?' ?></h1>
+	</header>
+
+	<form class="dl-sticker dl-form dl-dream-card" action="" method="post">
 		<?= csrf_field() ?>
-		<div class="mask d-flex align-items-center h-100 gradient-custom-3">
-			<div class="container h-100">	 
-				<div class="card" style="border-radius: 15px;">
-					<div class="card-body p-5">
-						<h2 class="text-uppercase text-center mb-5">Log Dream</h2>
-						<div data-mdb-input-init class="form-outline mb-4">
-							<label class="form-label" for="dat">Date</label>
-							<input type="date" name="date" id="date" value="<?php if($_POST) { echo esc(set_value('date')); }elseif(isset($date)){ echo $date; }else{ echo esc(date('Y-m-d',strtotime('now'))); } ?>" class="form-control form-control-lg" />	
-						</div>
-						<div data-mdb-input-init class="form-outline mb-4">
-							<label class="form-label" for="title">Title</label>
-							<input type="text"  maxlength="100" minlength="1"  name="title" id="title" value="<?php if($_POST){ echo esc(set_value('title')); }elseif(isset($title) && isset($id) && !$_POST){ echo $title; } ?>" class="form-control form-control-lg" />	
-						</div>
-						<div data-mdb-input-init class="form-outline mb-4" >
-							<label class="form-label" for="full_description">Dream</label>
-							<textarea name="full_description"  maxlength="700" minlength="1"  id="full_description" class="form-control form-control-lg" /><?php if($_POST){ echo esc(set_value('full_description')); }elseif(isset($full_description)){ echo $full_description; } ?></textarea>
-						</div>	
-						<div class="mb-3">
-							<label for="newTagInput" class="form-label">Tag: <small></label>
-							<input class="form-control form-control-lg"  name='tags' value='<?php if(esc(set_value('tags')) != '' && $_POST){ echo esc(set_value('tags')); }elseif(isset($tags)){ echo esc($tags); } ?>' autofocus>
-						</div>
-						<div class="mb-3">
-							<label for="newTagInput" class="form-label">Visibility: <small></label>
-							<select name="visibility" class="form-control form-control-lg" autofocus>
-								<option value="">- select -</option>
-								<option <?php if($visibility == 'friends' || (isset($_POST) &&  esc(set_value('visibility')) == 'friends')){ echo "selected='selected'"; } ?> value="friends">Friends - dreamers that you have approved links with can view.</option>
-								<option <?php if($visibility == 'public' || (isset($_POST) &&  esc(set_value('visibility')) == 'public')){ echo "selected='selected'"; } ?> value="public">Public - all site dreamers can view.</option>
-								<option <?php if($visibility == 'private' || (isset($_POST) &&  esc(set_value('visibility')) == 'private')){ echo "selected='selected'"; } ?> value="private">Private - only you can view dreams.</option>
-							</select>
-						</div>
-						<div class="d-flex justify-content-center">
-							<button  type="submit" data-mdb-button-init data-mdb-ripple-init class="btn btn-success btn-block btn-lg gradient-custom-4 text-body"><?php if(isset($id)){ echo 'Save'; }else{ echo 'Add'; } ?></button>
-						</div>
-					</div>
-				</div>
+		<div class="dl-dream-row">
+			<div class="dl-field">
+				<label for="title">Title</label>
+				<input class="dl-input" type="text" maxlength="100" name="title" id="title" value="<?= $val('title', $editing ? $title : '') ?>" placeholder="The neon city" required>
 			</div>
+			<div class="dl-field">
+				<label for="date">Night of</label>
+				<input class="dl-input" type="date" name="date" id="date" value="<?= $val('date', $date ?? date('Y-m-d')) ?>" required>
+			</div>
+		</div>
+
+		<div class="dl-field">
+			<label for="full_description">The dream</label>
+			<textarea class="dl-input" name="full_description" id="full_description" maxlength="700" rows="8" placeholder="Write it before it fades: where you were, who was there, how it felt." required><?= $val('full_description', $full_description ?? '') ?></textarea>
+			<div class="dl-row-between">
+				<p class="dl-hint" id="dl-count" aria-live="polite"></p>
+			</div>
+		</div>
+
+		<div class="dl-symbols" id="dl-symbols" hidden>
+			<div class="dl-eyebrow">Symbols spotted · tap to add as a tag</div>
+			<div class="dl-symbol-list" id="dl-symbol-list"></div>
+		</div>
+
+		<div class="dl-field">
+			<label for="tags">Tags</label>
+			<input class="dl-input" name="tags" id="tags" value="<?= esc($posted ? set_value('tags') : ($tags ?? '')) ?>" placeholder="ocean, flying, grandma">
+			<p class="dl-hint">People, places, feelings. Up to 15.</p>
+		</div>
+
+		<fieldset class="dl-field dl-visibility">
+			<legend>Who can see it</legend>
+			<?php foreach ([
+				'private' => ['Only me', 'bi-lock'],
+				'friends' => ['My links', 'bi-people'],
+				'public'  => ['Everyone', 'bi-globe2'],
+			] as $value => [$label, $icon]): ?>
+				<label>
+					<input type="radio" name="visibility" value="<?= $value ?>"<?= $visibility === $value ? ' checked' : '' ?> required>
+					<span><i class="bi <?= $icon ?>"></i> <?= $label ?></span>
+				</label>
+			<?php endforeach; ?>
+		</fieldset>
+
+		<div class="dl-row-between">
+			<a class="dl-link-quiet" href="<?= site_url('user/' . session()->get('user_id') . '/dreams'); ?>">Cancel</a>
+			<button class="dl-btn" type="submit"><?= $editing ? 'Save changes' : 'Log this dream' ?></button>
 		</div>
 	</form>
 </section>
- 
- 
+<script type="application/json" id="dl-lexicon"><?= $lexicon ?></script>

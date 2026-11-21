@@ -20,7 +20,19 @@ class TagModel extends Model
 		return $this->where('dream_id', $id)->findAll(); // Assuming 'id' is your primary key column	 
 	}
 	
-	public function top_10_tags($user_id){ 
+	/** @return array<int, list<string>> tags keyed by dream id */
+	public function tags_for_dreams(array $dream_ids){
+		$by_dream = [];
+		if(empty($dream_ids)){
+			return $by_dream;
+		}
+		foreach($this->whereIn('dream_id', array_map('intval', $dream_ids))->findAll() as $row){
+			$by_dream[$row['dream_id']][] = $row['tag'];
+		}
+		return $by_dream;
+	}
+
+	public function top_10_tags($user_id){
 		return $this->select('tag,count(*) as frequency')
 			->join('dreams', 'tags.dream_id = dreams.id', 'left')
 			->where('dreams.created_by', $user_id)

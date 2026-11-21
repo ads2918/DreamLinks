@@ -40,7 +40,7 @@ $(".unlink").click(function() {
 	$href = $(this).attr('href');
 	bootbox.confirm('<strong>Are you sure you want to unlink with dreamer?</strong><br>', function (result) {
 		if(result){
-			window.location = $href;
+			$.post($href).always(function(){ window.location.reload(); });
 		}
 	});
 });

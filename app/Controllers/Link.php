@@ -37,7 +37,7 @@ class Link extends BaseController
 			$model->save([
 				'id' => $id,
 				'request_approved' => 1,
-				'request_approved_datetime' => date('Y-m-d h:i:s',strtotime('now')),
+				'request_approved_datetime' => date('Y-m-d H:i:s'),
 			]);	
 			
 			$remaining_pending = count($model->user_pending_links($this->session->user_id));
@@ -50,7 +50,7 @@ class Link extends BaseController
 	public function unlink($id){	
 		$model = model(LinkModel::class);
 		$model_link = $model->find($id);
-		if(($this->session->user_id == $model_link['request_user_id']) || ($this->session->user_id == $model_link['recipient_user_id'])){
+		if($model_link && (($this->session->user_id == $model_link['request_user_id']) || ($this->session->user_id == $model_link['recipient_user_id']))){
 			if($model_link['request_approved']){
 				$unlink = $model->decline_link_by_id($id);
 				if($unlink){
@@ -67,7 +67,7 @@ class Link extends BaseController
 			// 'id' => $id,
 			// 'request_approved' => 0,
 			// 'block_flag' => 1,
-			// 'block_datetime' => date('Y-m-d h:i:s',strtotime('now')),
+			// 'block_datetime' => date('Y-m-d H:i:s'),
         // ]);	
 		
 		// $remaining_pending = count($model->user_pending_links($session->user_id));
@@ -86,7 +86,7 @@ class Link extends BaseController
 				'id' => $id,
 				'request_approved' => 0,
 				'decline_flag' => 1,
-				'decline_datetime' => date('Y-m-d h:i:s',strtotime('now')),
+				'decline_datetime' => date('Y-m-d H:i:s'),
 			]);	
 			
 			$remaining_pending = count($model->user_pending_links($session->user_id));

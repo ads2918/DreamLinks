@@ -21,7 +21,18 @@
 			'<path d="M0 ' + (-r) + ' A' + r + ' ' + r + ' 0 0 ' + outer + ' 0 ' + r + ' A' + (Math.abs(k) * r) + ' ' + r + ' 0 0 ' + inner + ' 0 ' + (-r) + 'Z" fill="' + lit + '"/>' +
 			'<circle r="' + r + '" fill="none" stroke="' + INK.ink + '" stroke-width="1.6"/></svg>';
 	}
-	window.DreamLinks = { moonPhase: moonPhase, phaseName: phaseName, moonSVG: moonSVG };
+	/* ---------- CSRF: every POST must carry the token from the page's meta tag ---------- */
+	function csrfHash() { var m = document.querySelector('meta[name="csrf-hash"]'); return m ? m.content : ''; }
+	function post(url, data) {
+		var body = new FormData();
+		Object.keys(data || {}).forEach(function (k) { body.append(k, data[k]); });
+		return fetch(url, { method: 'POST', body: body, credentials: 'same-origin', headers: { 'X-CSRF-TOKEN': csrfHash(), 'X-Requested-With': 'XMLHttpRequest' } })
+			.then(function (r) { if (!r.ok) throw new Error('Request failed: ' + r.status); return r; });
+	}
+	// legacy pages post with jQuery (DataTables, link requests)
+	if (window.jQuery) jQuery.ajaxSetup({ headers: { 'X-CSRF-TOKEN': csrfHash() } });
+
+	window.DreamLinks = { moonPhase: moonPhase, phaseName: phaseName, moonSVG: moonSVG, post: post };
 
 	/* ---------- code rain: always a trickle, heavy bursts every so often ---------- */
 	function rain() {
@@ -29,10 +40,13 @@
 		if (!cv || still) return;
 		var ctx = cv.getContext('2d');
 		var CH = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワン0123456789☾✦';
+		// emoji are surrogate pairs, so they live in an array; aliens turn up most
+		var EMOJI = ['👽', '👽', '👽', '👾', '🛸', '🌙', '✨', '🔮', '🪐', '👁️', '🍄', '💫', '🌀', '⭐'];
 		var W, H;
 		function size() { var d = Math.min(window.devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight; cv.width = W * d; cv.height = H * d; ctx.setTransform(d, 0, 0, d, 0, 0); }
 		size(); addEventListener('resize', size);
-		function rc() { return CH[Math.random() * CH.length | 0]; }
+		function rc() { return Math.random() < 0.05 ? EMOJI[Math.random() * EMOJI.length | 0] : CH[Math.random() * CH.length | 0]; }
+		function isEmoji(c) { return c.length > 1; }
 		// far columns are small, slow and faint; near ones are big, fast and strong
 		var LAYERS = [
 			{ size: 11, alpha: 0.45, step: [90, 140] },
@@ -64,10 +78,18 @@
 					d.row++; d.last = now; d.chars.unshift(rc()); d.chars.length = d.len;
 					if (Math.random() < 0.35) d.chars[Math.random() * d.len | 0] = rc();
 				}
-				ctx.font = '500 ' + d.L.size + 'px "DM Mono", monospace';
+				ctx.font = '500 ' + d.L.size + 'px "DM Mono", "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", monospace';
 				for (var i = 0; i < d.len; i++) {
 					var y = (d.row - i) * lh;
 					if (y < 0 || y > H + lh) continue;
+					if (isEmoji(d.chars[i])) {
+						// color emoji ignore fillStyle, so fade them with globalAlpha instead
+						// kept stronger than the letters around them so they stand out
+						ctx.globalAlpha = (i < 3 ? 1 : Math.max(0.55, 0.9 * (1 - i / d.len))) * (0.4 + 0.6 * d.L.alpha);
+						ctx.fillText(d.chars[i], d.x, y);
+						ctx.globalAlpha = 1;
+						continue;
+					}
 					if (i === 0) ctx.fillStyle = 'rgba(255,255,255,' + (0.9 * d.L.alpha).toFixed(3) + ')';
 					else if (i < 3) ctx.fillStyle = 'rgba(' + d.head.join(',') + ',' + (0.7 * d.L.alpha).toFixed(3) + ')';
 					else ctx.fillStyle = 'rgba(38,19,74,' + (0.32 * (1 - i / d.len) * d.L.alpha).toFixed(3) + ')';
@@ -131,9 +153,38 @@
 				btn.textContent = show ? 'hide' : 'show';
 			});
 		});
+		// little moon icons: <span data-moon-phase="0.42" data-moon-size="22">
+		document.querySelectorAll('[data-moon-phase]').forEach(function (el) {
+			el.innerHTML = moonSVG(parseFloat(el.getAttribute('data-moon-phase')), +el.getAttribute('data-moon-size') || 20, INK.yellow, INK.ink);
+		});
 		// close an open dropdown when clicking elsewhere
 		document.addEventListener('click', function (e) {
 			document.querySelectorAll('details.dl-drop[open]').forEach(function (d) { if (!d.contains(e.target)) d.removeAttribute('open'); });
+		});
+		// reminder settings use the browser's time zone
+		var tz = window.Intl && Intl.DateTimeFormat().resolvedOptions().timeZone;
+		if (tz) {
+			document.querySelectorAll('[data-dl-timezone]').forEach(function (i) { i.value = tz; });
+			document.querySelectorAll('[data-dl-timezone-label]').forEach(function (s) { s.textContent = tz; });
+		}
+		// forms that delete or cut ties ask first
+		document.addEventListener('submit', function (e) {
+			var msg = e.target.getAttribute('data-confirm');
+			if (msg && !confirm(msg)) e.preventDefault();
+		});
+		// "I've dreamt this too"
+		document.addEventListener('click', function (e) {
+			var btn = e.target.closest('[data-resonate]');
+			if (!btn || btn.disabled) return;
+			btn.disabled = true;
+			post(btn.getAttribute('data-resonate'))
+				.then(function (r) { return r.json(); })
+				.then(function (res) {
+					btn.setAttribute('aria-pressed', res.on ? 'true' : 'false');
+					btn.querySelector('.n').textContent = res.count;
+				})
+				.catch(function () { /* leave the button as it was */ })
+				.then(function () { btn.disabled = false; });
 		});
 	}
 

@@ -16,19 +16,22 @@ class Contact extends BaseController {
         // Validate user input
 		helper(['form']);
         if (!$this->validate([
-            'name'    => 'required|min_length[3]',
+            'name'    => 'required|min_length[3]|max_length[100]',
             'email'   => 'required|valid_email',
-            'message' => 'required'
+            'message' => 'required|max_length[5000]'
         ])) {
-            return view('contact_form', ['validation' => $this->validator]);
+            return $this->index();
         }
 
-        // Send Email Logic (Simplified)
+        // Send from our own address (Gmail rejects spoofed senders); replies go to the visitor.
+        $name = $this->request->getPost('name');
+        $from = $this->request->getPost('email');
         $email = \Config\Services::email();
-        $email->setTo('dreamlinks1111@gmail.com');
-        $email->setFrom($this->request->getPost('email'), $this->request->getPost('name'));
+        $email->setTo($this->admin_email);
+        $email->setFrom($this->admin_email, 'DreamLinks contact form');
+        $email->setReplyTo($from, $name);
         $email->setSubject('Contact Form Submission');
-        $email->setMessage('<b>Name:</b>'. $this->request->getPost('name') .'<br><b>Email:</b>'. $this->request->getPost('email') .'<br><b>Message:</b>'. $this->request->getPost('message'));
+        $email->setMessage('<b>Name:</b> '. esc($name) .'<br><b>Email:</b> '. esc($from) .'<br><b>Message:</b><br>'. nl2br(esc($this->request->getPost('message'))));
 
         if ($email->send()) {
             return redirect()->to('/contact')->with('status', 'Message sent successfully!');

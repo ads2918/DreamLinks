@@ -17,8 +17,12 @@ class UserModel extends Model
 									'status',
 									'ai_analysis_enabled',
 									'default_dream_visibility',
-									'reset_token',  
-									'reset_expires' 
+									'reset_token',
+									'reset_expires',
+									'reminder_enabled',
+									'reminder_hour',
+									'timezone',
+									'reminder_last_sent',
 								];
 	
 	public function delete_record_by_id($id){ 

@@ -9,7 +9,7 @@ $tab = function (string $path) use ($uri) {
 	return trim($path, '/') === $uri ? ' aria-current="page"' : '';
 };
 $avatar = function ($image) {
-	return $image == '' ? base_url('assets/images/no-image.png') : base_url('uploads/' . $image);
+	return esc($image == '' ? base_url('assets/images/no-image.png') : base_url('uploads/' . $image), 'attr');
 };
 ?>
 <!doctype html>
@@ -19,6 +19,7 @@ $avatar = function ($image) {
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<meta name="description" content="<?= esc($description ?? 'DreamLinks: a dream journal you share with the people you are linked to.') ?>">
 		<meta name="theme-color" content="#cfd6ff">
+		<meta name="csrf-hash" content="<?= csrf_hash() ?>">
 		<link rel="icon" href="<?= base_url('favicon.ico'); ?>?v=2" type="image/x-icon">
 		<title>DreamLinks | <?= esc($title ?? '') ?></title>
 		<link rel="preconnect" href="https://fonts.googleapis.com">
@@ -64,7 +65,8 @@ $avatar = function ($image) {
 						<li><a href="<?= site_url(''); ?>"<?= $tab(''); ?>>Feed</a></li>
 						<li><a href="<?= site_url('dream/add'); ?>"<?= $tab('dream/add'); ?>>Log a dream</a></li>
 						<li><a href="<?= site_url('user/' . $uid . '/dreams'); ?>"<?= $tab('user/' . $uid . '/dreams'); ?>>Journal</a></li>
-						<li><a href="<?= site_url('user/' . $uid . '/analysis'); ?>"<?= $tab('user/' . $uid . '/analysis'); ?>>Analysis</a></li>
+						<li><a href="<?= site_url('user/' . $uid . '/dreamscape'); ?>"<?= $tab('user/' . $uid . '/dreamscape'); ?>>Dreamscape</a></li>
+						<li><a href="<?= site_url('user/' . $uid . '/analysis'); ?>"<?= $tab('user/' . $uid . '/analysis'); ?>>Readings</a></li>
 						<li><a href="<?= site_url('user/' . $uid . '/links'); ?>"<?= $tab('user/' . $uid . '/links'); ?>>Links</a></li>
 					</ul>
 
@@ -118,7 +120,10 @@ $avatar = function ($image) {
 								<a href="<?= site_url('admin/users'); ?>"><i class="bi bi-shield-lock"></i> Admin</a>
 							<?php endif; ?>
 							<hr>
-							<a href="<?= site_url('user/logout'); ?>"><i class="bi bi-box-arrow-right"></i> Log out</a>
+							<form action="<?= site_url('user/logout'); ?>" method="post">
+								<?= csrf_field() ?>
+								<button type="submit" class="dl-drop-item dl-drop-btn"><i class="bi bi-box-arrow-right"></i> Log out</button>
+							</form>
 						</div>
 					</details>
 				<?php endif; ?>

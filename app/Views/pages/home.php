@@ -1,36 +1,32 @@
-<div style="text-align:center">
-	<span class='h3'>What's everyone else dreaming about?</span>
-</div>
-<!--<small><b>Note:</b> Dreams below have been flagged by dreamer as public or for friends to view.</small>-->
-<div class="latest-dream-wrapper">
-	<?php if(!empty($public_dreams)): ?>
-		<?php foreach($public_dreams as $recent_dream): ?><br>
-			<ul class="list-group">
-			  <li class="list-group-item">
-				<div style="float:left;">
-					<?php 
-					if($recent_dream['image'] == ''){ 
-						$profile_image =  base_url('assets/images/no-image.png'); 
-					}else{ 
-						$profile_image =  base_url('uploads/'. $recent_dream['image']); 
-					}
-					?>
-					<a href="<?= site_url('/user/'. $recent_dream['id']); ?>" ><img class="profile-image"  src="<?php echo  $profile_image; ?>"></a>
-					<div style="text-align:center">
-						<?php echo $recent_dream['username']; ?>
-					</div>	
-				</div>
-				<div style="float:right;width:85%">
-					<h4><?php echo $recent_dream['title']; ?></h4>
-					<small><b><?php echo date('m/d/Y',strtotime($recent_dream['date'])); ?></b></small>
-					<?php echo $recent_dream['full_description']; ?>	
-				</div>
-				<div style="clear:both">
-			  </li> 
-			</ul>
+<?php $viewer_id = (int) session()->get('user_id'); ?>
+<header class="dl-page-head dl-row-between">
+	<div>
+		<div class="dl-eyebrow">The commons</div>
+		<h1>What's everyone dreaming?</h1>
+	</div>
+	<a class="dl-btn" href="<?= site_url('dream/add'); ?>"><i class="bi bi-plus-lg"></i> Log a dream</a>
+</header>
+
+<?php if (! empty($pulse)): ?>
+	<section class="dl-sticker dl-pulse" aria-label="Lately in the commons">
+		<div class="dl-eyebrow">Last 30 days</div>
+		<ul>
+			<?php foreach ($pulse as $p): ?>
+				<li><strong><?= (int) $p['dreamers'] ?> dreamers</strong> dreamt about <span class="dl-chip"><?= esc($p['symbol']) ?></span></li>
+			<?php endforeach; ?>
+		</ul>
+	</section>
+<?php endif; ?>
+
+<div class="dl-feed">
+	<?php if (! empty($public_dreams)): ?>
+		<?php foreach ($public_dreams as $dream): ?>
+			<?= view('templates/dream-card', ['dream' => $dream, 'viewer_id' => $viewer_id]) ?>
 		<?php endforeach; ?>
 	<?php else: ?>
-		<br>
-		No dreams could be located at this time...
+		<div class="dl-sticker dl-empty">
+			<h2>It's quiet in here.</h2>
+			<p>No one you can see has shared a dream yet. <a href="<?= site_url('search?search=a'); ?>">Find dreamers to link with</a>, or share one of your own.</p>
+		</div>
 	<?php endif; ?>
 </div>

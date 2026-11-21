@@ -5,8 +5,9 @@ $(document).ready(function() {
 		bootbox.confirm('<strong>Are you sure you want to block user?</strong><br>', function (result) {
 			if(result){
 				$.ajax({
-					url: "/user/block-link/"+ $link_id, 
-					data: {},      
+					url: "/user/block-link/"+ $link_id,
+					method: "POST",
+					data: {},
 					success: function(response) {
 					   if($.isNumeric(response)){
 						  window.location.reload();
