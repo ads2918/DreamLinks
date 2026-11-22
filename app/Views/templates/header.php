@@ -62,12 +62,13 @@ $avatar = function ($image) {
 					</div>
 				<?php else: ?>
 					<ul class="dl-tabs">
-						<li><a href="<?= site_url(''); ?>"<?= $tab(''); ?>>Feed</a></li>
-						<li><a href="<?= site_url('dream/add'); ?>"<?= $tab('dream/add'); ?>>Log a dream</a></li>
-						<li><a href="<?= site_url('user/' . $uid . '/dreams'); ?>"<?= $tab('user/' . $uid . '/dreams'); ?>>Journal</a></li>
-						<li><a href="<?= site_url('user/' . $uid . '/dreamscape'); ?>"<?= $tab('user/' . $uid . '/dreamscape'); ?>>Dreamscape</a></li>
-						<li><a href="<?= site_url('user/' . $uid . '/analysis'); ?>"<?= $tab('user/' . $uid . '/analysis'); ?>>Readings</a></li>
-						<li><a href="<?= site_url('user/' . $uid . '/links'); ?>"<?= $tab('user/' . $uid . '/links'); ?>>Links</a></li>
+						<?php /* on phones this list becomes a bottom tab bar, so each tab carries an icon and a short label */ ?>
+						<li><a href="<?= site_url(''); ?>"<?= $tab(''); ?>><i class="bi bi-house-heart"></i><span>Feed</span></a></li>
+						<li><a href="<?= site_url('dream/add'); ?>"<?= $tab('dream/add'); ?>><i class="bi bi-plus-circle"></i><span><span class="dl-tab-long">Log a dream</span><span class="dl-tab-short">Log</span></span></a></li>
+						<li><a href="<?= site_url('user/' . $uid . '/dreams'); ?>"<?= $tab('user/' . $uid . '/dreams'); ?>><i class="bi bi-journal-text"></i><span>Journal</span></a></li>
+						<li><a href="<?= site_url('user/' . $uid . '/dreamscape'); ?>"<?= $tab('user/' . $uid . '/dreamscape'); ?>><i class="bi bi-diagram-3"></i><span><span class="dl-tab-long">Dreamscape</span><span class="dl-tab-short">Map</span></span></a></li>
+						<li><a href="<?= site_url('user/' . $uid . '/analysis'); ?>"<?= $tab('user/' . $uid . '/analysis'); ?>><i class="bi bi-stars"></i><span>Readings</span></a></li>
+						<li><a href="<?= site_url('user/' . $uid . '/links'); ?>"<?= $tab('user/' . $uid . '/links'); ?>><i class="bi bi-link-45deg"></i><span>Links</span></a></li>
 					</ul>
 
 					<form class="dl-search" action="<?= site_url('search'); ?>" role="search">

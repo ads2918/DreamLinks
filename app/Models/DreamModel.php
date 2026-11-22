@@ -9,7 +9,26 @@ class DreamModel extends Model
     protected $table            = 'dreams';
    
     protected $allowedFields    = ['created_by','date','full_description','title','visibility','ai_prompt_id'];
- 
+
+	/** Validation shared by the dream form and the app API. */
+	public const RULES = [
+		'title'  => 'required|max_length[100]|min_length[1]',
+		'full_description'  => 'required|trim|max_length[700]|min_length[1]',
+		'date'  => 'trim|required|valid_date',
+		'visibility' => 'required|in_list[public,private,friends]',
+	];
+	public const MAX_TAGS = 15;
+
+	/** Deletes a dream with its tags and "dreamt this too" marks. @return bool */
+	public function remove(int $id){
+		if(! $this->delete_record_by_id($id)){
+			return false;
+		}
+		model(TagModel::class)->delete_records_by_dream_id($id);
+		model(ResonanceModel::class)->where('dream_id', $id)->delete();
+		return true;
+	}
+
 	public function get_records_by_user($user_id,$search = '',$start=0,$length=10,$column ='date' ,$order ='ASC') {
 		if($search == ''){
 			if($start == 'all'){

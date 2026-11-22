@@ -9,8 +9,10 @@ use App\Models\BlockModel;
 use App\Models\MoonCycleModel;
 use App\Models\PromptModel;
 use App\Models\ResonanceModel;
+use App\Libraries\DreamFeed;
 use App\Libraries\DreamSymbols;
 use App\Libraries\MoonPhase;
+use App\Libraries\Readings;
 use App\Services\GeminiService;
 use CodeIgniter\Config\Services;
 class User extends BaseController
@@ -166,35 +168,8 @@ class User extends BaseController
 	}
 	
 	public function dream_analysis(){
-		$user_id = (int) $this->session->user_id;
+		$data = Readings::forUser((int) $this->session->user_id, (bool) ($this->current_user['ai_analysis_enabled'] ?? false));
 		$data['title'] = 'Readings';
-
-		$readings = array_values(array_filter(array_map(
-			[PromptModel::class, 'reading'],
-			model(PromptModel::class)->get_user_prompts($user_id, 'dreams', 60)
-		)));
-		foreach ($readings as $k => $reading) {
-			$readings[$k]['moon'] = MoonPhase::name($reading['datetime']);
-			$readings[$k]['moon_phase'] = MoonPhase::phase($reading['datetime']);
-		}
-		$data['readings'] = $readings;
-
-		// Which symbols keep coming back, from the dreams themselves rather than the AI.
-		$dream_model = model(DreamModel::class);
-		$dreams = $dream_model->where('created_by', $user_id)->findAll();
-		$tags = model(TagModel::class)->tags_for_dreams(array_column($dreams, 'id'));
-		$counts = [];
-		foreach ($dreams as $dream) {
-			foreach (DreamSymbols::forDream($dream['title'], $dream['full_description'], $tags[$dream['id']] ?? []) as $s) {
-				$counts[$s] = ($counts[$s] ?? 0) + 1;
-			}
-		}
-		arsort($counts);
-		$data['top_symbols'] = array_slice($counts, 0, 8, true);
-		$data['dream_count'] = count($dreams);
-		$data['waiting'] = count($dream_model->get_unprompted_dreams_by_user_id($user_id));
-		$data['enabled'] = (bool) ($this->current_user['ai_analysis_enabled'] ?? false);
-		$data['tonight'] = date('Y-m-d');
 
 		return view('templates/header', $data)
 			. view('users/analysis', $data)
@@ -344,18 +319,8 @@ class User extends BaseController
 			// your own profile shows what others can see, not your private dreams
 			$recent_dreams = array_values(array_filter($recent_dreams, fn ($d) => $d['visibility'] !== 'private'));
 		}
-		$dream_ids = array_column($recent_dreams, 'id');
-		$tags = model(TagModel::class)->tags_for_dreams($dream_ids);
-		$resonance = model(ResonanceModel::class);
-		$counts = $resonance->counts_for($dream_ids);
-		$mine = $resonance->marked_by($viewer_id, $dream_ids);
-		foreach($recent_dreams as $key => $dream){
-			$recent_dreams[$key]['symbols'] = DreamSymbols::forDream($dream['title'], $dream['full_description'], $tags[$dream['id']] ?? []);
-			$recent_dreams[$key]['moon'] = MoonPhase::name($dream['date']);
-			$recent_dreams[$key]['resonance'] = $counts[$dream['id']] ?? 0;
-			$recent_dreams[$key]['resonated'] = in_array((int) $dream['id'], $mine, true);
-		}
-		
+		$recent_dreams = DreamFeed::decorate($recent_dreams, $viewer_id);
+
 		$data['profile_user'] = $profile_user;
 		$data['page_js'] = 'profile.js';
 		$data['blocked'] = $blocked;

@@ -69,4 +69,34 @@ $routes->cli('cron/ai-user-dream-run',[User::class,'aiUserDreamRun']);
 $routes->cli('cron/moon/logcycles',[MoonCycle::class,'logcycles']);
 $routes->cli('cron/reminders',[Reminder::class,'send']);
 
+
+/* mobile app API: JSON only, Bearer token sign-in (see app/Filters/ApiAuth.php) */
+$routes->group('api/v1', ['namespace' => 'App\Controllers\Api'], static function ($routes) {
+	$routes->post('auth/login', 'Auth::login');
+
+	$routes->group('', ['filter' => 'apiauth'], static function ($routes) {
+		$routes->post('auth/logout', 'Auth::logout');
+		$routes->get('me', 'Me::show');
+		$routes->post('me', 'Me::update');
+
+		$routes->get('feed', 'Dreams::feed');
+		$routes->get('dreams', 'Dreams::index');
+		$routes->post('dreams', 'Dreams::create');
+		$routes->get('dreams/(:num)', 'Dreams::show/$1');
+		$routes->put('dreams/(:num)', 'Dreams::update/$1');
+		$routes->delete('dreams/(:num)', 'Dreams::delete/$1');
+		$routes->post('dreams/(:num)/resonate', 'Dreams::resonate/$1');
+
+		$routes->get('users/(:num)', 'People::show/$1');
+		$routes->post('users/(:num)/link', 'People::requestLink/$1');
+		$routes->get('search', 'People::search');
+		$routes->get('links', 'People::links');
+		$routes->post('links/(:num)/(accept|decline)', 'People::answer/$1/$2');
+		$routes->delete('links/(:num)', 'People::unlink/$1');
+
+		$routes->get('dreamscape', 'Insights::dreamscape');
+		$routes->get('readings', 'Insights::readings');
+		$routes->get('symbols', 'Insights::symbols');
+	});
+});
 $routes->set404Override('App\Controllers\Errors::show404');

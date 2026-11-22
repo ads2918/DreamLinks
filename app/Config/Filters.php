@@ -13,6 +13,7 @@ use CodeIgniter\Filters\PageCache;
 use CodeIgniter\Filters\PerformanceMetrics;
 use CodeIgniter\Filters\SecureHeaders;
 use App\Filters\AuthFilter; // Add your filter
+use App\Filters\ApiAuth;
 
 class Filters extends BaseFilters
 {
@@ -36,6 +37,7 @@ class Filters extends BaseFilters
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
 		'auth'     => AuthFilter::class, // Alias for your filter
+		'apiauth'  => ApiAuth::class,    // mobile app: Bearer token instead of a session
     ];
 
     /**
@@ -75,7 +77,8 @@ class Filters extends BaseFilters
     public array $globals = [
         'before' => [
             // 'honeypot',
-            // 'csrf',
+            // checks POST, PUT, PATCH and DELETE; the app API sends a Bearer token instead of cookies, so it has no CSRF risk
+            'csrf' => ['except' => ['api/*']],
             // 'invalidchars',
         ],
         'after' => [
@@ -98,7 +101,6 @@ class Filters extends BaseFilters
      * @var array<string, list<string>>
      */
     public array $methods = [
-		'POST' => ['csrf'],
 	];
 
     /**

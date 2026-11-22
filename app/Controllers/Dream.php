@@ -8,13 +8,7 @@ use App\Models\ResonanceModel;
 use App\Libraries\DreamSymbols;
 class Dream extends BaseController
 {
-	private const RULES = [
-		'title'  => 'required|max_length[100]|min_length[1]',
-		'full_description'  => 'required|trim|max_length[700]|min_length[1]',
-		'date'  => 'trim|required|valid_date',
-		'tags' => 'required',
-		'visibility' => 'required|in_list[public,private,friends]',
-	];
+	private const RULES = DreamModel::RULES + ['tags' => 'required'];
 
 	public function editSubmit($id){
 	    helper('form');
@@ -28,7 +22,7 @@ class Dream extends BaseController
         }
 
 		$tags = $this->parse_tags($data['tags']);
-		if(count($tags) > 15){
+		if(count($tags) > DreamModel::MAX_TAGS){
 			session()->setFlashdata('error', 'Cannot use more than 15 tags.');
 			return $this->edit($id,1);
 		}
@@ -78,11 +72,7 @@ class Dream extends BaseController
 		$model = model(DreamModel::class);
 		$data = $model->find($id);
 		if($data && $data['created_by'] == $this->session->user_id){
-			$deleted = $model->delete_record_by_id($id);
-			if($deleted){
-				model(TagModel::class)->delete_records_by_dream_id($id);
-				model(ResonanceModel::class)->where('dream_id', $id)->delete();
-			}
+			$deleted = $model->remove($id);
 		}
 		if($deleted){
 			session()->setFlashdata('success', 'Dream has been deleted.');
@@ -113,7 +103,7 @@ class Dream extends BaseController
             return $this->add(1);
         }
 		$tags = $this->parse_tags($data['tags']);
-		if(count($tags) > 15){
+		if(count($tags) > DreamModel::MAX_TAGS){
 			session()->setFlashdata('error', 'Cannot use more than 15 tags.');
             return $this->add(1);
 		}
@@ -164,13 +154,6 @@ class Dream extends BaseController
 	}
 
 	private function save_tags($dream_id, array $tags){
-		$tag_model = model(TagModel::class);
-		$tag_model->delete_records_by_dream_id($dream_id);
-		foreach($tags as $tag){
-			$tag_model->save([
-				'tag' => $tag,
-				'dream_id' => $dream_id,
-			]);
-		}
+		model(TagModel::class)->replace_for_dream((int) $dream_id, $tags);
 	}
 }

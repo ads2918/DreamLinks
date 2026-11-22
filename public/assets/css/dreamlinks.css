@@ -56,6 +56,7 @@ body.dl :focus-visible { outline: 3px solid var(--pink); outline-offset: 3px; }
 .dl-tabs a { display: block; color: var(--ink) !important; text-decoration: none !important; padding: 7px 14px; border-radius: 999px; font-weight: 600; font-size: 14px; white-space: nowrap; border: 2px solid transparent; }
 .dl-tabs a:hover { border-color: var(--ink); }
 .dl-tabs a[aria-current="page"] { background: var(--yellow); border-color: var(--ink); }
+.dl-tabs .bi, .dl-tab-short { display: none; }
 
 .dl-search { display: flex; align-items: center; border: 2px solid var(--ink); border-radius: 999px; background: var(--card); padding: 2px 4px 2px 14px; }
 .dl-search input { border: 0; background: none; width: 150px; font: inherit; font-size: 14px; color: var(--ink); padding: 4px 0; }
@@ -99,6 +100,21 @@ body.dl :focus-visible { outline: 3px solid var(--pink); outline-offset: 3px; }
 	.dl-nav-bar { gap: 8px; padding-left: 14px; }
 	.dl-brand { font-size: 21px; }
 	.dl-nav-guest .dl-link-quiet { display: none; }
+}
+/* phones: the tabs leave the top bar and become an app-style bar along the bottom */
+@media (max-width: 760px) {
+	.dl-nav-bar { justify-content: space-between; }
+	.dl-tabs {
+		position: fixed; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 70;
+		display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px; padding: 6px;
+		background: var(--card); border: 2.5px solid var(--ink); border-radius: 20px; box-shadow: 4px 4px 0 var(--ink); overflow: visible;
+	}
+	.dl-tabs a { display: grid; justify-items: center; gap: 1px; padding: 6px 2px 5px; border-radius: 14px; font-size: 11px; font-weight: 600; }
+	.dl-tabs .bi { display: block; font-size: 20px; line-height: 1; }
+	.dl-tab-long { display: none; }
+	.dl-tab-short { display: inline; }
+	main.dl-main { padding-bottom: 110px; }
+	footer.dl-footer { padding-bottom: 100px !important; }
 }
 
 /* ---------- main + flash ---------- */
@@ -316,7 +332,14 @@ button.dl-chip:hover { background: var(--yellow); }
 .dl-bars .bar span { display: block; height: 100%; background: var(--pink); }
 .dl-bars .n { font: 500 13px var(--f-mono); text-align: right; }
 .dl-moonbars { list-style: none; margin: 0 0 10px; padding: 0; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 8px; align-items: end; }
-.dl-moonbars li { display: grid; justify-items: center; gap: 4px; }
+.dl-moonbars li { display: grid; }
+.dl-moonbars button { display: grid; justify-items: center; gap: 4px; padding: 6px 2px 4px; border: 2px solid transparent; border-radius: 12px; background: none; color: var(--ink); cursor: pointer; font: inherit; }
+.dl-moonbars button:hover { border-color: var(--ink); }
+.dl-moonbars button[aria-pressed="true"] { background: var(--yellow); border-color: var(--ink); }
+.dl-moonbars button[aria-pressed="true"] .bar span { background: var(--pink); }
+.dl-moon-detail { margin-top: 14px; padding-top: 14px; border-top: 2px dashed rgba(38,19,74,.25); display: grid; gap: 8px; }
+.dl-main .dl-moon-detail h3 { font-size: 22px; margin: 0; }
+.dl-moon-detail p { margin: 0; }
 .dl-moonbars .bar { width: 100%; max-width: 34px; height: 130px; display: flex; align-items: flex-end; }
 .dl-moonbars .bar span { display: block; width: 100%; min-height: 3px; background: var(--violet); border: 2px solid var(--ink); border-radius: 8px 8px 3px 3px; }
 .dl-moonbars .n { font: 500 12px var(--f-mono); }

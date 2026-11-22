@@ -20,6 +20,26 @@ class TagModel extends Model
 		return $this->where('dream_id', $id)->findAll(); // Assuming 'id' is your primary key column	 
 	}
 	
+	/** Replaces a dream's tags. Tags are stored raw and escaped on output. */
+	public function replace_for_dream(int $dream_id, array $tags){
+		$this->delete_records_by_dream_id($dream_id);
+		foreach($tags as $tag){
+			$this->insert(['tag' => $tag, 'dream_id' => $dream_id]);
+		}
+	}
+
+	/** Trims, shortens to 25 characters and de-duplicates tag strings. @return list<string> */
+	public static function clean(array $values){
+		$tags = [];
+		foreach($values as $value){
+			$value = trim(mb_substr(is_scalar($value) ? (string) $value : '', 0, 25));
+			if($value !== ''){
+				$tags[] = $value;
+			}
+		}
+		return array_values(array_unique($tags));
+	}
+
 	/** @return array<int, list<string>> tags keyed by dream id */
 	public function tags_for_dreams(array $dream_ids){
 		$by_dream = [];

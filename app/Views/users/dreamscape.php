@@ -113,15 +113,47 @@ $moon_top = array_sum($moon) ? MoonPhase::NAMES[array_search(max($moon), $moon, 
 		<h2>Dreams by moon phase</h2>
 		<ul class="dl-moonbars">
 			<?php foreach ($moon as $i => $n): ?>
-				<li title="<?= esc(MoonPhase::NAMES[$i]) ?>: <?= (int) $n ?> dreams">
-					<span class="bar"><span style="height:<?= round($n / $moon_max * 100) ?>%"></span></span>
-					<span class="n"><?= (int) $n ?></span>
-					<span class="moon" data-phase="<?= $i / 8 ?>"></span>
-					<span class="dl-visually-hidden"><?= esc(MoonPhase::NAMES[$i]) ?></span>
+				<li>
+					<button type="button" data-moon-tab="<?= $i ?>" aria-controls="dl-moon-<?= $i ?>" aria-pressed="false" title="<?= esc(MoonPhase::NAMES[$i]) ?>: <?= (int) $n ?> dreams">
+						<span class="bar"><span style="height:<?= round($n / $moon_max * 100) ?>%"></span></span>
+						<span class="n"><?= (int) $n ?></span>
+						<span class="moon" data-phase="<?= $i / 8 ?>"></span>
+						<span class="dl-visually-hidden"><?= esc(MoonPhase::NAMES[$i]) ?></span>
+					</button>
 				</li>
 			<?php endforeach; ?>
 		</ul>
-		<p class="dl-hint">New moon on the left, full moon in the middle. Based on the night each dream is dated.</p>
+		<p class="dl-hint" data-moon-hint>New moon on the left, full moon in the middle. Tap a phase to see what you dream about then.</p>
+		<?php foreach ($moon_detail as $i => $phase): ?>
+			<div class="dl-moon-detail" id="dl-moon-<?= $i ?>" hidden>
+				<h3><?= esc($phase['name']) ?></h3>
+				<?php if (! $phase['count']): ?>
+					<p class="dl-hint">No dreams logged under this moon yet.</p>
+				<?php else: ?>
+					<p class="dl-hint"><?= (int) $phase['count'] ?> <?= $phase['count'] === 1 ? 'dream' : 'dreams' ?>, <?= (int) $phase['share'] ?>% of your journal.</p>
+					<?php if ($phase['symbols']): ?>
+						<div class="dl-eyebrow">Symbols under this moon</div>
+						<div class="dl-chips">
+							<?php foreach ($phase['symbols'] as $s): ?>
+								<span class="dl-chip<?= $s['stands_out'] ? ' is-both' : '' ?>"<?= $s['stands_out'] ? ' title="Shows up more under this moon than usual"' : '' ?>><?= esc($s['symbol']) ?> · <?= (int) $s['n'] ?><?= $s['stands_out'] ? ' ↑' : '' ?></span>
+							<?php endforeach; ?>
+						</div>
+						<?php if (array_filter(array_column($phase['symbols'], 'stands_out'))): ?>
+							<p class="dl-hint">Yellow ↑ means it comes up more under this moon than in your dreams overall.</p>
+						<?php endif; ?>
+					<?php endif; ?>
+					<div class="dl-eyebrow">Dreams</div>
+					<ul class="dl-panel-dreams">
+						<?php foreach ($phase['dreams'] as $d): ?>
+							<li><a href="<?= site_url('dream/edit/' . (int) $d['id']); ?>"><?= esc($d['title']) ?></a> <span class="dl-hint"><?= esc(date('M j, Y', strtotime($d['date']))) ?></span></li>
+						<?php endforeach; ?>
+					</ul>
+					<?php if ($phase['count'] > count($phase['dreams'])): ?>
+						<p class="dl-hint">and <?= $phase['count'] - count($phase['dreams']) ?> more</p>
+					<?php endif; ?>
+				<?php endif; ?>
+			</div>
+		<?php endforeach; ?>
 	</div>
 </section>
 

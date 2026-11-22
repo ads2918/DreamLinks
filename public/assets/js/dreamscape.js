@@ -8,6 +8,19 @@
 		el.innerHTML = DreamLinks.moonSVG(parseFloat(el.getAttribute('data-phase')), 20, C.yellow, C.ink);
 	});
 
+	// tap a moon bar to open that phase's symbols and dreams; tap again to close
+	var moonTabs = document.querySelectorAll('[data-moon-tab]');
+	moonTabs.forEach(function (btn) {
+		btn.addEventListener('click', function () {
+			var open = btn.getAttribute('aria-pressed') !== 'true';
+			moonTabs.forEach(function (b) {
+				var on = open && b === btn;
+				b.setAttribute('aria-pressed', on ? 'true' : 'false');
+				document.getElementById(b.getAttribute('aria-controls')).hidden = !on;
+			});
+		});
+	});
+
 	var host = document.getElementById('dl-map');
 	var dataEl = document.getElementById('dl-graph');
 	if (!host || !dataEl) return;
