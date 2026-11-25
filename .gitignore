@@ -64,6 +64,9 @@ writable/uploads/*
 writable/debugbar/*
 !writable/debugbar/index.html
 
+# held by the readings cron so runs every minute never overlap
+writable/readings.lock
+
 php_errors.log
 
 # Backups and archives

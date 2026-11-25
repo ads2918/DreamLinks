@@ -190,9 +190,9 @@ $moon_top = array_sum($moon) ? MoonPhase::NAMES[array_search(max($moon), $moon, 
 			<?php endforeach; ?>
 			<a href="<?= site_url('user/' . $uid . '/analysis'); ?>">All readings</a>
 		<?php elseif (! ($current_user['ai_analysis_enabled'] ?? 0)): ?>
-			<p class="dl-hint">AI readings are off. <a href="<?= site_url('user/edit'); ?>">Turn them on</a> and your new dreams get read overnight.</p>
+			<p class="dl-hint">AI readings are off. <a href="<?= site_url('user/edit'); ?>">Turn them on</a> and each new dream gets read a minute or so after you save it.</p>
 		<?php else: ?>
-			<p class="dl-hint">Your first reading arrives after the next overnight run.</p>
+			<p class="dl-hint">Your first reading arrives a minute or so after your next dream.</p>
 		<?php endif; ?>
 	</div>
 </section>

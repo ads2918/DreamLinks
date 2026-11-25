@@ -56,6 +56,7 @@ class Insights extends ApiController
 		return $this->respond([
 			'enabled'     => $r['enabled'],
 			'waiting'     => $r['waiting'],
+			'capped'      => $r['capped'],
 			'dream_count' => $r['dream_count'],
 			'tonight'     => ['name' => MoonPhase::name($r['tonight']), 'phase' => MoonPhase::phase($r['tonight'])],
 			'top_symbols' => $top,

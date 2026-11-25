@@ -36,6 +36,15 @@ class PromptModel extends Model
 		];
 	}
 
+	/** Readings written for the user since midnight, by the database's clock (it stamps prompt_datetime). */
+	public function count_today(int $user_id, string $type): int
+	{
+		return $this->where('prompt_type', $type)
+					->where('for_user_id', $user_id)
+					->where('prompt_datetime >=', 'CURDATE()', false)
+					->countAllResults();
+	}
+
 	public function get_user_prompts($user_id,$type,$limit){
 		return $this->where('prompt_type',$type)
 					->where('for_user_id',$user_id)

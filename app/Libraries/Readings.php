@@ -38,6 +38,8 @@ class Readings
 			'dream_count' => count($dreams),
 			'waiting'     => count($dream_model->get_unprompted_dreams_by_user_id($user_id)),
 			'enabled'     => $enabled,
+			// waiting dreams past the daily cap get read tomorrow instead of in a minute
+			'capped'      => ReadingRunner::capped($user_id),
 			'tonight'     => date('Y-m-d'),
 		];
 	}

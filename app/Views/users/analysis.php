@@ -18,7 +18,7 @@ $top_max = max($top_symbols ?: [1]);
 	<a class="dl-btn" href="<?= site_url('dream/add'); ?>"><i class="bi bi-plus-lg"></i> Log a dream</a>
 </header>
 
-<section class="dl-sticker dl-read-status" aria-label="Reading status">
+<section class="dl-sticker dl-read-status" aria-label="Reading status"<?= $enabled && $waiting && ! $capped ? ' data-reading-pending' : '' ?>>
 	<div>
 		<span class="dl-eyebrow">Next reading</span>
 		<?php if (! $enabled): ?>
@@ -31,7 +31,7 @@ $top_max = max($top_symbols ?: [1]);
 	</div>
 	<div>
 		<span class="dl-eyebrow">Arrives</span>
-		<strong><?= $enabled && $waiting ? 'Overnight, around 3 am' : 'After your next dream' ?></strong>
+		<strong><?= ! $enabled || ! $waiting ? 'After your next dream' : ($capped ? 'Tomorrow · daily limit reached' : 'In a minute or two') ?></strong>
 	</div>
 	<div>
 		<span class="dl-eyebrow">Tonight</span>
@@ -39,14 +39,14 @@ $top_max = max($top_symbols ?: [1]);
 	</div>
 	<div>
 		<span class="dl-eyebrow">So far</span>
-		<strong><?= count($readings) ?> <?= count($readings) === 1 ? 'reading' : 'readings' ?> · <?= (int) $dream_count ?> dreams</strong>
+		<strong><?= count($readings) ?> <?= count($readings) === 1 ? 'reading' : 'readings' ?> · <?= (int) $dream_count ?> <?= $dream_count === 1 ? 'dream' : 'dreams' ?></strong>
 	</div>
 </section>
 
 <?php if (! $enabled): ?>
 	<div class="dl-sticker dl-empty dl-read-off">
 		<h2>AI readings are switched off.</h2>
-		<p>Turn them on and each night your new dreams get read for patterns, symbols and what the sky was doing. <a href="<?= site_url('user/edit'); ?>">Turn on readings</a></p>
+		<p>Turn them on and each new dream gets read for patterns, symbols and what the sky was doing, a minute or so after you save it. <a href="<?= site_url('user/edit'); ?>">Turn on readings</a></p>
 	</div>
 <?php endif; ?>
 
@@ -74,7 +74,13 @@ $top_max = max($top_symbols ?: [1]);
 		<?php elseif ($enabled): ?>
 			<div class="dl-sticker dl-empty">
 				<h2>Your first reading is on its way.</h2>
-				<p>Log a dream or two. Readings are written overnight from the dreams you added that day.</p>
+				<?php if (! $waiting): ?>
+					<p>Log a dream and your first reading shows up here a minute or so later.</p>
+				<?php elseif ($capped): ?>
+					<p>You've had today's readings. Your new dreams get read tomorrow.</p>
+				<?php else: ?>
+					<p>Your dream is being read now. This page checks back on its own.</p>
+				<?php endif; ?>
 			</div>
 		<?php endif; ?>
 
