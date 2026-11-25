@@ -20,7 +20,8 @@ class MoonPhase
 	public static function phase(string $date): float
 	{
 		// Noon local time stands in for "the night of" a dream date.
-		$t = strtotime($date . ' 12:00:00');
+		// Only the date part is used, so a full datetime (like a reading's) works too.
+		$t = strtotime(substr($date, 0, 10) . ' 12:00:00');
 		$days = ($t - self::NEW_MOON_2000) / 86400;
 		$p = fmod($days / self::SYNODIC, 1);
 		return $p < 0 ? $p + 1 : $p;

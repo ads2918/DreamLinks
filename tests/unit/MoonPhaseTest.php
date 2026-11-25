@@ -43,4 +43,10 @@ final class MoonPhaseTest extends CIUnitTestCase
 	{
 		$this->assertSame(0, MoonPhase::index('2024-05-08')); // new moon
 	}
+
+	public function testFullDatetimeUsesItsDate(): void
+	{
+		// readings pass a prompt_datetime, not a bare date
+		$this->assertSame(MoonPhase::name('2024-04-23'), MoonPhase::name('2024-04-23 21:16:00'));
+	}
 }
