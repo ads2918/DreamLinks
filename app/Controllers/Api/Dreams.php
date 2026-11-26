@@ -10,12 +10,16 @@ use App\Models\TagModel;
 
 class Dreams extends ApiController
 {
-	/** GET api/v1/feed?page= : dreams by others the user can see, newest first, plus the 30-day pulse */
+	/**
+	 * GET api/v1/feed?page=&q=&since=&sort=&from= : dreams by others the user can see, plus the 30-day pulse.
+	 * from=links keeps only linked dreamers. The rest is DreamModel::filtered().
+	 */
 	public function feed()
 	{
 		[$limit, $offset] = $this->paging();
 		$linked = model(LinkModel::class)->linked_user_ids($this->uid());
-		$rows = model(DreamModel::class)->visible_to($this->uid(), $linked, null, false)->findAll($limit, $offset);
+		$owners = $this->request->getGet('from') === 'links' ? $linked : null;
+		$rows = model(DreamModel::class)->visible_to($this->uid(), $linked, $owners, false, $this->filters())->findAll($limit, $offset);
 		$out = ['dreams' => array_map([$this, 'dream'], DreamFeed::decorate($rows, $this->uid()))];
 		if ($offset === 0) {
 			$out['pulse'] = DreamFeed::pulse($this->uid(), $linked);
@@ -23,12 +27,18 @@ class Dreams extends ApiController
 		return $this->respond($out);
 	}
 
-	/** GET api/v1/dreams?page= : the user's own journal, private dreams included */
+	/** GET api/v1/dreams?page=&q=&since=&sort=&visibility= : the user's own journal, private dreams included */
 	public function index()
 	{
 		[$limit, $offset] = $this->paging();
-		$rows = model(DreamModel::class)->visible_to($this->uid(), [], [$this->uid()])->findAll($limit, $offset);
+		$rows = model(DreamModel::class)->visible_to($this->uid(), [], [$this->uid()], true, $this->filters())->findAll($limit, $offset);
 		return $this->respond(['dreams' => array_map([$this, 'dream'], DreamFeed::decorate($rows, $this->uid()))]);
+	}
+
+	/** The list filters from the query string, for DreamModel::filtered() */
+	private function filters(): array
+	{
+		return (array) $this->request->getGet(['q', 'since', 'sort', 'visibility']);
 	}
 
 	/** GET api/v1/dreams/{id} : any dream the user is allowed to see */

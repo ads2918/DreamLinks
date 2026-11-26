@@ -119,6 +119,10 @@ class Dream extends BaseController
 		$this->save_tags($model->insertID, $tags);
 
 		session()->setFlashdata('success', 'Dream has been logged.');
+		if(! empty($this->current_user['ai_analysis_enabled'])){
+			// straight to Readings, which spins until this dream's reading is written
+			return redirect()->to('user/'. $this->session->user_id .'/analysis');
+		}
 		return redirect()->to('user/'. $this->session->user_id .'/dreams');
 	}
 

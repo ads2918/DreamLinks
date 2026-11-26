@@ -5,6 +5,7 @@ namespace App\Controllers\Api;
 use App\Libraries\DreamscapeData;
 use App\Libraries\DreamSymbols;
 use App\Libraries\MoonPhase;
+use App\Libraries\ReadingRunner;
 use App\Libraries\Readings;
 
 /** Dreamscape, readings and the symbol list, in the same shapes the website pages use. */
@@ -43,6 +44,14 @@ class Insights extends ApiController
 			'compare'      => $d['compare'] ? $kin($d['compare']) + ['only_mine' => $d['compare']['only_mine'], 'only_theirs' => $d['compare']['only_theirs']] : null,
 			'compare_note' => $d['compare_note'],
 		]);
+	}
+
+	/** POST api/v1/readings/now : reads waiting dreams right away. status is done, none, capped, failed, busy or off */
+	public function readNow()
+	{
+		set_time_limit(90);
+		$status = $this->user()['ai_analysis_enabled'] ? ReadingRunner::readNow($this->uid()) : 'off';
+		return $this->respond(['status' => $status]);
 	}
 
 	/** GET api/v1/readings */

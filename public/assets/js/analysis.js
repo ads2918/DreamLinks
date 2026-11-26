@@ -1,16 +1,30 @@
-// Readings page: while a reading is being written, check back every 20 seconds for up to 5 minutes.
+// Readings page: when a dream is waiting, ask the server to read it now and spin until the answer lands.
 (function () {
-	if (!document.querySelector('[data-reading-pending]')) {
-		try { sessionStorage.removeItem('readingChecks'); } catch (e) {}
+	var card = document.querySelector('[data-reading-pending]');
+	if (!card || !window.DreamLinks) {
 		return;
 	}
-	var checks = 0;
-	try { checks = Number(sessionStorage.getItem('readingChecks')) || 0; } catch (e) {}
-	if (checks >= 15) {
-		return;
+	var tries = 0;
+
+	function fail(text) {
+		card.classList.add('is-failed');
+		card.querySelector('h2').textContent = "Couldn't read it just now.";
+		card.querySelector('p').textContent = text;
 	}
-	setTimeout(function () {
-		try { sessionStorage.setItem('readingChecks', String(checks + 1)); } catch (e) {}
-		window.location.reload();
-	}, 20000);
+
+	function ask() {
+		DreamLinks.post(card.getAttribute('data-reading-pending'))
+			.then(function (r) { return r.json(); })
+			.then(function (res) {
+				if (res.status === 'busy' && ++tries < 6) {
+					setTimeout(ask, 3000); // another reading run is finishing; try again shortly
+				} else if (res.status === 'failed' || res.status === 'busy') {
+					fail("We'll try again in a few minutes. Your dream is saved.");
+				} else {
+					window.location.reload(); // done, capped or nothing left: the page shows where things stand
+				}
+			})
+			.catch(function () { fail('Check your connection and refresh. Your dream is saved.'); });
+	}
+	ask();
 })();

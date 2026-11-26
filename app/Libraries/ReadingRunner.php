@@ -8,32 +8,52 @@ use App\Models\UserModel;
 use Config\Readings as ReadingsConfig;
 
 /**
- * Writes AI readings for dreams that don't have one yet. Run by cron every minute, so a reading
- * lands a minute or so after the dream is saved. Each dreamer gets at most Config\Readings::$dailyCap
- * readings a day; anything past that waits for tomorrow.
+ * Writes AI readings for dreams that don't have one yet. A page asks for one right after a dream is
+ * saved (readNow), and cron runs every minute to catch anything missed. Each dreamer gets at most
+ * Config\Readings::$dailyCap readings a day; anything past that waits for tomorrow.
  */
 class ReadingRunner
 {
+	public const DONE   = 'done';   // a reading was written
+	public const NONE   = 'none';   // nothing waiting to be read
+	public const CAPPED = 'capped'; // today's readings are used up
+	public const FAILED = 'failed'; // Gemini failed just now or recently; cron tries again later
+	public const BUSY   = 'busy';   // another run held the lock too long
+
 	/** @return string what happened, for the cron log */
 	public static function run(): string
 	{
-		// runs every minute, and a slow Gemini call must not let two runs read the same dreams
-		$lock = fopen(WRITEPATH . 'readings.lock', 'c');
-		if (! $lock || ! flock($lock, LOCK_EX | LOCK_NB)) {
+		$lock = self::lock(0);
+		if (! $lock) {
 			return 'Another run is still going.';
 		}
 
 		try {
 			$written = 0;
 			foreach (model(UserModel::class)->get_active() as $user) {
-				if ($user['ai_analysis_enabled'] && self::readFor((int) $user['id'])) {
+				if ($user['ai_analysis_enabled'] && self::readFor((int) $user['id']) === self::DONE) {
 					$written++;
 				}
 			}
 			return "Wrote {$written} " . ($written === 1 ? 'reading' : 'readings') . '.';
 		} finally {
-			flock($lock, LOCK_UN);
-			fclose($lock);
+			self::unlock($lock);
+		}
+	}
+
+	/** Reads the user's waiting dreams now, for a page that spins until the reading lands. @return string one of the constants */
+	public static function readNow(int $user_id): string
+	{
+		// cron may be mid-run, maybe on these very dreams, so wait a little for it
+		$lock = self::lock(10);
+		if (! $lock) {
+			return self::BUSY;
+		}
+
+		try {
+			return self::readFor($user_id);
+		} finally {
+			self::unlock($lock);
 		}
 	}
 
@@ -43,14 +63,45 @@ class ReadingRunner
 		return model(PromptModel::class)->count_today($user_id, 'dreams') >= config(ReadingsConfig::class)->dailyCap;
 	}
 
-	/** One reading covering every dream the user hasn't had read yet. @return bool true when one was saved */
-	private static function readFor(int $user_id): bool
+	/** One lock for every run, so two never read the same dreams. @return resource|null */
+	private static function lock(int $wait_seconds)
+	{
+		$lock = fopen(WRITEPATH . 'readings.lock', 'c');
+		if (! $lock) {
+			return null;
+		}
+		$until = time() + $wait_seconds;
+		while (! flock($lock, LOCK_EX | LOCK_NB)) {
+			if (time() >= $until) {
+				fclose($lock);
+				return null;
+			}
+			usleep(250000);
+		}
+		return $lock;
+	}
+
+	/** @param resource $lock */
+	private static function unlock($lock): void
+	{
+		flock($lock, LOCK_UN);
+		fclose($lock);
+	}
+
+	/** One reading covering every dream the user hasn't had read yet. @return string one of the constants */
+	private static function readFor(int $user_id): string
 	{
 		$dream_model = model(DreamModel::class);
 		$dreams = $dream_model->get_unprompted_dreams_by_user_id($user_id);
+		if (! $dreams) {
+			return self::NONE;
+		}
+		if (self::capped($user_id)) {
+			return self::CAPPED;
+		}
 		$retry_key = 'reading_retry_' . $user_id;
-		if (! $dreams || self::capped($user_id) || cache($retry_key)) {
-			return false;
+		if (cache($retry_key)) {
+			return self::FAILED;
 		}
 
 		$prompt_model = model(PromptModel::class);
@@ -71,7 +122,7 @@ class ReadingRunner
 		if ($json === '' || ! json_validate($json)) {
 			// back off, or a bad answer would cost a Gemini call every minute
 			cache()->save($retry_key, 1, config(ReadingsConfig::class)->retryAfterMinutes * 60);
-			return false;
+			return self::FAILED;
 		}
 
 		$prompt_model->save([
@@ -82,7 +133,7 @@ class ReadingRunner
 		]);
 		$prompt_id = $prompt_model->getInsertID();
 		$dream_model->whereIn('id', array_column($dreams, 'id'))->set('ai_prompt_id', $prompt_id)->update();
-		return true;
+		return self::DONE;
 	}
 
 	private static function prompt(string $dream_string, string $last_response): string

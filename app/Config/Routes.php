@@ -45,6 +45,7 @@ $routes->get('user/(:segment)/dreams',[User::class,'dreams'],['filter' => 'auth'
 $routes->post('user/(:segment)/dreams',[User::class,'dreamsTable'],['filter' => 'auth']);
 $routes->post('user/(:segment)/unlink',[Link::class,'unlink'],['filter' => 'auth']);
 $routes->get('user/(:segment)/analysis',[User::class,'dream_analysis'],['filter' => 'auth']);
+$routes->post('readings/now',[User::class,'readNow'],['filter' => 'auth']);
 $routes->get('user/(:num)/dreamscape',[Dreamscape::class,'index'],['filter' => 'auth']);
 $routes->get('user/(:segment)/links',[User::class,'links'],['filter' => 'auth']);
 $routes->get('user/(:segment)/account',[User::class,'accountMenu'],['filter' => 'auth']);
@@ -96,6 +97,7 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api'], static function
 
 		$routes->get('dreamscape', 'Insights::dreamscape');
 		$routes->get('readings', 'Insights::readings');
+		$routes->post('readings/now', 'Insights::readNow');
 		$routes->get('symbols', 'Insights::symbols');
 	});
 });

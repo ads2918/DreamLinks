@@ -63,9 +63,9 @@ class DreamModel extends Model
 	 * Starts a query for the dreams $viewer_id is allowed to see: public dreams, "friends" dreams
 	 * by linked dreamers, and with $include_own every one of the viewer's own dreams.
 	 * Leaves out deleted accounts and anyone either side has blocked.
-	 * $owner_ids narrows it to those dreamers. Chain ->findAll() on the result.
+	 * $owner_ids narrows it to those dreamers. $filters is what filtered() takes. Chain ->findAll() on the result.
 	 */
-	public function visible_to(int $viewer_id, array $linked_ids, ?array $owner_ids = null, bool $include_own = true){
+	public function visible_to(int $viewer_id, array $linked_ids, ?array $owner_ids = null, bool $include_own = true, array $filters = []){
 		$linked_ids = array_map('intval', $linked_ids);
 		$this->select('dreams.id, dreams.title, dreams.full_description, dreams.date, dreams.visibility, dreams.created_by, users.username, users.image')
 			 ->join('users', 'users.id = dreams.created_by')
@@ -88,6 +88,35 @@ class DreamModel extends Model
 			(b.blocked_user_id = dreams.created_by AND b.blocked_by_user_id = ' . $viewer_id . ')))', null, false);
 		if($owner_ids !== null){
 			$this->whereIn('dreams.created_by', $owner_ids ? array_map('intval', $owner_ids) : [0]);
+		}
+		return $this->filtered($filters);
+	}
+
+	/**
+	 * Narrows and sorts a visible_to() query. Unknown or empty values are ignored.
+	 * q: words in the title, the text or a tag. since: days back (7, 30 or 365).
+	 * visibility: public, friends or private. sort: newest (default), oldest or resonance.
+	 */
+	private function filtered(array $f){
+		$q = trim((string) ($f['q'] ?? ''));
+		if($q !== ''){
+			// built by hand: like() leaves % and _ in the search text as wildcards
+			$like = $this->db->escape('%' . $this->db->escapeLikeString($q) . '%') . " ESCAPE '!'";
+			$this->where("(dreams.title LIKE {$like} OR dreams.full_description LIKE {$like}
+				OR EXISTS (SELECT 1 FROM tags t WHERE t.dream_id = dreams.id AND t.tag LIKE {$like}))", null, false);
+		}
+		if(in_array((int) ($f['since'] ?? 0), [7, 30, 365], true)){
+			$this->where('dreams.date >=', date('Y-m-d', strtotime('-' . (int) $f['since'] . ' days')));
+		}
+		if(in_array($f['visibility'] ?? '', ['public', 'friends', 'private'], true)){
+			$this->where('dreams.visibility', $f['visibility']);
+		}
+		switch($f['sort'] ?? 'newest'){
+			case 'oldest':
+				return $this->orderBy('dreams.date', 'ASC')->orderBy('dreams.id', 'ASC');
+			case 'resonance':
+				$this->orderBy('(SELECT COUNT(*) FROM dream_resonance r WHERE r.dream_id = dreams.id)', 'DESC', false);
+				break;
 		}
 		return $this->orderBy('dreams.date', 'DESC')->orderBy('dreams.id', 'DESC');
 	}

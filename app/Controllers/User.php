@@ -107,67 +107,34 @@ class User extends BaseController
         return $response->text();
     }
  
-	public function dreams($user_id,$error = 0): string{		 
-		helper('url');
-		helper('form');
+	/** The journal: the user's own dreams as compact rows, with search, sort and filters (DreamModel::filtered). */
+	public function dreams($user_id,$error = 0): string{
 		$session = \Config\Services::session();
-		$data['title'] = ucfirst('My Dreams'); 
+		$data['title'] = 'My Dreams';
 		$data['error'] = $error;
-		$data['user_dreams'] = array();
-		// $data['breadcrumbs'][] = array('name' => 'Home','url' =>);
-		// $data['breadcrumbs'][] = array('name' => 'User','url' => '/');
-		// $data['breadcrumbs'][] = array('name' => 'Dreams','url' => '/','active' => 1);
-		
-		$moon_cycle = model(MoonCycleModel::class);
-		$next_moon_cycle = $moon_cycle->next_cycle();
-		$data['next_moon_cycle'] = $next_moon_cycle;
- 
 		if($user_id != $session->user_id){
-			session()->setFlashdata('error', 'You do have permissions to this page');	
+			session()->setFlashdata('error', 'You do have permissions to this page');
 			return view('templates/header', $data)
-			. view('templates/footer'); 
-		}else{
-			$dream_string = '';
-			 
-			$prompt_model = model(PromptModel::class);
-			$latest_dream_response = $prompt_model->get_latest_prompt($user_id,'dreams');
-			$data['dream_recent_patterns'] = '';
-			$data['dream_recent_symbols']  = '';
-			$data['dream_recent_overview'] = '';
-			$data['dream_recent_plantery_moon_events'] = '';
-			$data['dream_recent_prompt_datetime'] = '';
-			$data['has_recent_prompt'] = 0;
-			if(!empty($latest_dream_response)){
-				$data['has_recent_prompt'] = 1;
-				$json_decode =  json_decode($latest_dream_response[0]['json_response']);
-				// AI output repeats dream text back, so it is escaped like any user input
-				$escape_all = fn ($list) => array_map(fn ($line) => esc((string) $line), (array) $list);
-				if(isset($json_decode->patterns)){
-					$data['dream_recent_patterns'] = implode(', ',$escape_all($json_decode->patterns));
-				}
-
-				if(isset($json_decode->symbols)){
-					$data['dream_recent_symbols'] = implode(', ',$escape_all($json_decode->symbols));
-				}
-
-				if(isset($json_decode->overview)){
-					$data['dream_recent_overview'] = implode('<br>',$escape_all($json_decode->overview));
-				}
-				if(isset($json_decode->significant_plantery_or_moons_syncing_with_dream_patterns)){
-					$data['dream_recent_plantery_moon_events'] = implode('<br>',$escape_all($json_decode->significant_plantery_or_moons_syncing_with_dream_patterns));
-				}
- 
-				$data['dream_recent_prompt_datetime'] = date('m/d/Y',strtotime($latest_dream_response[0]['prompt_datetime']));
-			}
-	 
-			$data['page_js'] = 'dreamTable.js';
-			return view('templates/header', $data)
-				. view('users/dreams')
-				. view('templates/footer',$data); 
+			. view('templates/footer');
 		}
-			
+
+		$viewer_id = (int) $session->user_id;
+		$filters = array_map('strval', (array) $this->request->getGet(['q', 'since', 'sort', 'visibility'])) + ['q' => '', 'since' => '', 'sort' => '', 'visibility' => ''];
+		$page = max(1, (int) $this->request->getGet('page'));
+		$per_page = 20;
+		// one extra row says whether there is an older page
+		$rows = model(DreamModel::class)->visible_to($viewer_id, [], [$viewer_id], true, $filters)->findAll($per_page + 1, ($page - 1) * $per_page);
+
+		$data['dreams'] = DreamFeed::decorate(array_slice($rows, 0, $per_page), $viewer_id);
+		$data['has_more'] = count($rows) > $per_page;
+		$data['page'] = $page;
+		$data['filters'] = $filters;
+		$data['page_js'] = 'journal.js';
+		return view('templates/header', $data)
+			. view('users/dreams', $data)
+			. view('templates/footer', $data);
 	}
-	
+
 	public function dream_analysis(){
 		$data = Readings::forUser((int) $this->session->user_id, (bool) ($this->current_user['ai_analysis_enabled'] ?? false));
 		$data['title'] = 'Readings';
@@ -177,6 +144,17 @@ class User extends BaseController
 			. view('users/analysis', $data)
 			. view('templates/footer', $data);
 	}
+
+	/** POST readings/now : reads the user's waiting dreams right away; the Readings page spins until this answers */
+	public function readNow(){
+		$user_id = (int) $this->session->user_id;
+		// Gemini takes a few seconds; don't hold the session lock and stall the user's other tabs
+		session()->close();
+		set_time_limit(90);
+		$status = ($this->current_user['ai_analysis_enabled'] ?? false) ? ReadingRunner::readNow($user_id) : 'off';
+		return $this->response->setJSON(['status' => $status]);
+	}
+
 	/** cron, every minute: reads new dreams, at most Config\Readings::$dailyCap readings per dreamer a day */
 	public function aiUserDreamRun(){
 		echo ReadingRunner::run() . PHP_EOL;

@@ -9,6 +9,8 @@ $latest = $readings[0] ?? null;
 $earlier = array_slice($readings, 1);
 $sections = ['patterns' => ['Patterns', 'is-pink'], 'symbols' => ['Symbols', 'is-yellow'], 'celestial' => ['In the sky', 'is-teal']];
 $top_max = max($top_symbols ?: [1]);
+// a dream is waiting and can be read today: the page asks for its reading and spins until it lands
+$pending = $enabled && $waiting && ! $capped;
 ?>
 <header class="dl-page-head dl-row-between">
 	<div>
@@ -18,7 +20,7 @@ $top_max = max($top_symbols ?: [1]);
 	<a class="dl-btn" href="<?= site_url('dream/add'); ?>"><i class="bi bi-plus-lg"></i> Log a dream</a>
 </header>
 
-<section class="dl-sticker dl-read-status" aria-label="Reading status"<?= $enabled && $waiting && ! $capped ? ' data-reading-pending' : '' ?>>
+<section class="dl-sticker dl-read-status" aria-label="Reading status">
 	<div>
 		<span class="dl-eyebrow">Next reading</span>
 		<?php if (! $enabled): ?>
@@ -31,7 +33,7 @@ $top_max = max($top_symbols ?: [1]);
 	</div>
 	<div>
 		<span class="dl-eyebrow">Arrives</span>
-		<strong><?= ! $enabled || ! $waiting ? 'After your next dream' : ($capped ? 'Tomorrow · daily limit reached' : 'In a minute or two') ?></strong>
+		<strong><?= ! $enabled || ! $waiting ? 'After your next dream' : ($capped ? 'Tomorrow · daily limit reached' : 'Any second now') ?></strong>
 	</div>
 	<div>
 		<span class="dl-eyebrow">Tonight</span>
@@ -46,12 +48,21 @@ $top_max = max($top_symbols ?: [1]);
 <?php if (! $enabled): ?>
 	<div class="dl-sticker dl-empty dl-read-off">
 		<h2>AI readings are switched off.</h2>
-		<p>Turn them on and each new dream gets read for patterns, symbols and what the sky was doing, a minute or so after you save it. <a href="<?= site_url('user/edit'); ?>">Turn on readings</a></p>
+		<p>Turn them on and each new dream gets read for patterns, symbols and what the sky was doing, a few seconds after you save it. <a href="<?= site_url('user/edit'); ?>">Turn on readings</a></p>
 	</div>
 <?php endif; ?>
 
 <div class="dl-read-layout">
 	<div class="dl-read-main">
+		<?php if ($pending): ?>
+			<div class="dl-sticker dl-read-pending" data-reading-pending="<?= site_url('readings/now') ?>" role="status">
+				<span class="dl-read-spinner" aria-hidden="true"></span>
+				<div>
+					<h2>Reading your dream…</h2>
+					<p>This takes a few seconds. Your reading shows up here when it's ready.</p>
+				</div>
+			</div>
+		<?php endif; ?>
 		<?php if ($latest): ?>
 			<article class="dl-sticker dl-read-hero">
 				<div class="dl-read-stamp">
@@ -71,15 +82,13 @@ $top_max = max($top_symbols ?: [1]);
 					<?php endforeach; ?>
 				</div>
 			</article>
-		<?php elseif ($enabled): ?>
+		<?php elseif ($enabled && ! $pending): ?>
 			<div class="dl-sticker dl-empty">
 				<h2>Your first reading is on its way.</h2>
-				<?php if (! $waiting): ?>
-					<p>Log a dream and your first reading shows up here a minute or so later.</p>
-				<?php elseif ($capped): ?>
+				<?php if ($capped): ?>
 					<p>You've had today's readings. Your new dreams get read tomorrow.</p>
 				<?php else: ?>
-					<p>Your dream is being read now. This page checks back on its own.</p>
+					<p>Log a dream and your reading shows up here a few seconds later.</p>
 				<?php endif; ?>
 			</div>
 		<?php endif; ?>
