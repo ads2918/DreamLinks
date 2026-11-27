@@ -6,6 +6,7 @@ use App\Libraries\DreamFeed;
 use App\Models\BlockModel;
 use App\Models\DreamModel;
 use App\Models\LinkModel;
+use App\Models\ReportModel;
 use App\Models\UserModel;
 
 /** Other dreamers: profiles, search and links. Blocks hide people from each other both ways. */
@@ -100,6 +101,51 @@ class People extends ApiController
 		}
 		$model->decline_link_by_id($link_id);
 		return $this->links();
+	}
+
+	/** POST api/v1/users/{id}/block : hides the two of you from each other and ends any link, like the website */
+	public function block(int $id)
+	{
+		if ($id === $this->uid() || ! model(UserModel::class)->where('id', $id)->where('deleted', 0)->first()) {
+			return $this->failNotFound('Dreamer not found.');
+		}
+		$model = model(BlockModel::class);
+		if (! $model->block_exsists($id, $this->uid())) {
+			$model->insert(['blocked_user_id' => $id, 'blocked_by_user_id' => $this->uid(), 'blocked_datetime' => date('Y-m-d H:i:s')]);
+		}
+		model(LinkModel::class)->decline_links($id, $this->uid());
+		return $this->blocks();
+	}
+
+	/** GET api/v1/blocks : dreamers this user has blocked */
+	public function blocks()
+	{
+		$blocked = [];
+		foreach (model(BlockModel::class)->block_list($this->uid()) as $b) {
+			$blocked[] = ['block_id' => (int) $b['id'], 'id' => (int) $b['blocked_user_id'], 'username' => $b['username'], 'avatar' => self::avatar($b['image'])];
+		}
+		return $this->respond(['blocked' => $blocked]);
+	}
+
+	/** DELETE api/v1/blocks/{id} : only the one who blocked can unblock */
+	public function unblock(int $block_id)
+	{
+		$model = model(BlockModel::class);
+		$block = $model->find($block_id);
+		if (! $block || (int) $block['blocked_by_user_id'] !== $this->uid()) {
+			return $this->failNotFound('Block not found.');
+		}
+		$model->unblock($block_id, $this->uid());
+		return $this->blocks();
+	}
+
+	/** POST api/v1/reports {dream_id or user_id, reason, note} : see ReportModel::REASONS */
+	public function report()
+	{
+		$in = $this->input();
+		$error = ReportModel::file($this->uid(), (int) ($in['user_id'] ?? 0) ?: null, (int) ($in['dream_id'] ?? 0) ?: null,
+			(string) ($in['reason'] ?? ''), (string) ($in['note'] ?? ''));
+		return $error ? $this->invalid(['reason' => $error]) : $this->respond(['ok' => true]);
 	}
 
 	private function findPerson(int $id): ?array

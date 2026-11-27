@@ -1,14 +1,19 @@
 <section class="dl-auth">
 	<?= view('templates/auth-poster', [
 		'heading' => 'Who are you…?',
-		'blurb'   => 'Keep a dream journal, link with people you trust, and get a reading of the patterns in your dreams. New accounts are approved by hand, and you will get an email once you are in.',
+		'blurb'   => 'Keep a dream journal, link with people you trust, and get a reading of the patterns in your dreams. We email you a link to confirm your address, and then you are in.',
 	]) ?>
 
 	<form class="dl-auth-card dl-sticker dl-form" action="<?= site_url('user'); ?>" method="post">
 		<?= csrf_field() ?>
 		<div>
 			<div class="dl-eyebrow">Join</div>
-			<h2>Request an account</h2>
+			<h2>Create an account</h2>
+		</div>
+
+		<div class="dl-trap" aria-hidden="true">
+			<label for="website">Leave this empty</label>
+			<input type="text" name="website" id="website" tabindex="-1" autocomplete="off">
 		</div>
 
 		<div class="dl-field">
@@ -36,7 +41,7 @@
 			<input class="dl-input" type="password" name="password2" id="password2" autocomplete="new-password" required>
 		</div>
 
-		<button class="dl-btn is-block" type="submit">Request account</button>
+		<button class="dl-btn is-block" type="submit">Create account</button>
 		<hr class="dl-divider">
 		<p class="dl-foot">Already a member? <a href="<?= site_url('user/login'); ?>">Log in</a></p>
 	</form>

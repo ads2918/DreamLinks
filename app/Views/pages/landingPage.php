@@ -8,7 +8,7 @@
 			<a class="dl-btn" href="<?= site_url('user/register'); ?>">Start your journal</a>
 			<a class="dl-btn is-plain" href="<?= site_url('user/login'); ?>">Log in</a>
 		</div>
-		<p class="dl-hint">Free. New accounts are approved by hand.</p>
+		<p class="dl-hint">Free. Takes a minute to sign up.</p>
 	</div>
 	<div class="dl-portal is-big" aria-hidden="true">
 		<canvas></canvas>

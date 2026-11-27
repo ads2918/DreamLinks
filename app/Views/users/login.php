@@ -29,6 +29,6 @@
 
 		<button class="dl-btn is-block" type="submit">Log in</button>
 		<hr class="dl-divider">
-		<p class="dl-foot">New here? <a href="<?= site_url('user/register'); ?>">Ask to join DreamLinks</a></p>
+		<p class="dl-foot">New here? <a href="<?= site_url('user/register'); ?>">Create an account</a></p>
 	</form>
 </section>

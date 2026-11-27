@@ -20,6 +20,7 @@ $routes->get('user/register',[User::class,'register']);
 $routes->post('user',[User::class,'create']);
 $routes->get('user/login',[User::class,'login']);
 $routes->post('user/login',[User::class,'loginSubmit']);
+$routes->get('user/confirm/(:segment)',[User::class,'confirm']);
 $routes->get('/learn', 'learn::index');
 $routes->get('contact', 'Contact::index');
 $routes->post('contact/send', 'Contact::send');
@@ -28,6 +29,13 @@ $routes->get('user/forgot-password', 'UserReset::forgotPassword');
 $routes->post('user/sendResetLink', 'UserReset::sendResetLink');
 $routes->get('user/reset-password/(:any)', 'UserReset::resetPassword/$1');
 $routes->post('user/updatePassword', 'UserReset::updatePassword');
+
+/* deleting an account works signed in (password) or signed out (emailed link) */
+$routes->get('account/delete', 'Account::delete');
+$routes->post('account/delete', 'Account::deleteSubmit');
+$routes->get('account/delete/confirm/(:segment)', 'Account::confirm/$1');
+$routes->post('account/delete/confirm', 'Account::confirmSubmit');
+$routes->get('account/deleted', 'Account::deleted');
 
 /* user logged in -- anything that changes data is POST so the CSRF filter covers it */
 $routes->post('user/logout',[User::class,'logout'],['filter' => 'auth']);
@@ -50,6 +58,8 @@ $routes->get('user/(:num)/dreamscape',[Dreamscape::class,'index'],['filter' => '
 $routes->get('user/(:segment)/links',[User::class,'links'],['filter' => 'auth']);
 $routes->get('user/(:segment)/account',[User::class,'accountMenu'],['filter' => 'auth']);
 $routes->get('user/(:segment)',[User::class,'profile'],['filter' => 'auth']);
+$routes->get('report', 'Report::index', ['filter' => 'auth']);
+$routes->post('report', 'Report::submit', ['filter' => 'auth']);
 $routes->get('search', [User::class, 'search'],['filter' => 'auth']);
 $routes->post('search', [User::class, 'searchTable'],['filter' => 'auth']);
 
@@ -79,6 +89,7 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api'], static function
 		$routes->post('auth/logout', 'Auth::logout');
 		$routes->get('me', 'Me::show');
 		$routes->post('me', 'Me::update');
+		$routes->post('me/delete', 'Me::delete');
 
 		$routes->get('feed', 'Dreams::feed');
 		$routes->get('dreams', 'Dreams::index');
@@ -94,6 +105,10 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api'], static function
 		$routes->get('links', 'People::links');
 		$routes->post('links/(:num)/(accept|decline)', 'People::answer/$1/$2');
 		$routes->delete('links/(:num)', 'People::unlink/$1');
+		$routes->post('users/(:num)/block', 'People::block/$1');
+		$routes->get('blocks', 'People::blocks');
+		$routes->delete('blocks/(:num)', 'People::unblock/$1');
+		$routes->post('reports', 'People::report');
 
 		$routes->get('dreamscape', 'Insights::dreamscape');
 		$routes->get('readings', 'Insights::readings');

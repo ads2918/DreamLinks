@@ -139,6 +139,16 @@ main.dl-main { flex: 1; width: 100%; margin: 0 !important; padding-top: 18px; pa
 .dl-btn.is-small { padding: 6px 16px; font-size: 14px; box-shadow: 3px 3px 0 var(--ink); }
 .dl-btn.is-plain { background: var(--card); color: var(--ink) !important; }
 .dl-btn.is-block { width: 100%; }
+.dl-btn.is-danger { background: var(--danger); }
+.dl-delete-list { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+/* the sign-up honeypot: off screen for people, still in the form for bots */
+.dl-trap { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.dl-report-reasons { border: 0; padding: 0; margin: 0; }
+.dl-report-reasons legend { font: 500 11px/1 var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.dl-report-reason { display: flex; align-items: center; gap: 10px; font-size: 15px; cursor: pointer; }
+.dl-report-reason input { accent-color: var(--pink); width: 18px; height: 18px; }
+.dl-report-link { color: var(--muted) !important; }
+.dl-report-link:hover { color: var(--danger) !important; }
 .dl-link-quiet { color: var(--ink) !important; font-weight: 600; font-size: 14px; text-decoration: none !important; padding: 6px 10px; }
 .dl-link-quiet:hover { text-decoration: underline !important; }
 

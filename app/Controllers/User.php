@@ -14,6 +14,7 @@ use App\Libraries\DreamSymbols;
 use App\Libraries\MoonPhase;
 use App\Libraries\ReadingRunner;
 use App\Libraries\Readings;
+use App\Libraries\Signup;
 use App\Services\GeminiService;
 use CodeIgniter\Config\Services;
 class User extends BaseController
@@ -473,36 +474,43 @@ class User extends BaseController
         }
 	
  
+		$done = 'Almost there! We sent a link to your email. Open it to confirm your account, then log in.';
+		// bots fill in the hidden "website" field; act as if it worked so they don't adapt
+		if ((string) $this->request->getPost('website') !== '') {
+			session()->setFlashdata('success', $done);
+			return redirect()->to('user/login');
+		}
+		if (! service('throttler')->check('signup-' . md5($this->request->getIPAddress()), 5, HOUR)) {
+			session()->setFlashdata('error', 'Too many sign-ups from here. Try again in an hour.');
+			return redirect()->to('user/register');
+		}
+
         // Gets the validated data.
-        $post = $this->validator->getValidated(); 
-        $model = model(UserModel::class);	
+        $post = $this->validator->getValidated();
+        $model = model(UserModel::class);
 		$hashed_password = password_hash($post['password'], PASSWORD_DEFAULT);
         $model->save([
             'password'  => $hashed_password,
 			'email' => $post['email'],
             'username' => $post['username'],
-			'status' => 'pending_approval',
+			'status' => 'unconfirmed',
         ]);
-		
-		$message = '<h1>Welcome to DreamLinks</h1>
-					<p>Thank you for your intrest in dreamlinks. 
-					Your access request for user <b>'. esc($post['username']) .'</b> is pending approval.
-					You will recieve an email once approved.</p>Sincerely,<br>DreamLinks Team';
-		$sent = $this->send_email($post['email'],'Welcome to DreamLinks',$message,1);
-		
-		$message = '<h1>Welcome to DreamLinks</h1>
-					<p>Thank you for your intrest in dreamlinks. 
-					Your access request for user <b>'. esc($post['username']) .'</b> is pending approval.
-					You will recieve an email once approved.</p>Sincerely,<br>DreamLinks Team';
- 
-		$notify_admin = $this->send_email($this->admin_email,'Dreamlinks - new user request.',esc($post['username']) .' is pending for approval',1);
-		
-		$data['title'] = ucfirst('Register User'); 
-		$data['error'] = 0;
- 
-		session()->setFlashdata('success', 'Your user account is pending approval. You will recieve an email once approved.');
-		return redirect()->to('../user/login');
+		Signup::sendConfirmation(['id' => $model->getInsertID(), 'email' => $post['email'], 'username' => $post['username']]);
+		$this->send_email($this->admin_email, 'DreamLinks - new sign-up', esc($post['username']) . ' just signed up.');
+
+		session()->setFlashdata('success', $done);
+		return redirect()->to('user/login');
     }
+
+	/** GET user/confirm/{token}: the link in the sign-up email */
+	public function confirm($token = ''){
+		if (! Signup::confirm((string) $token)) {
+			session()->setFlashdata('error', 'That link has expired or was already used. Log in and we will send you a new one.');
+		} else {
+			session()->setFlashdata('success', 'Your email is confirmed. Welcome to DreamLinks! Log in to start your journal.');
+		}
+		return redirect()->to($this->logged_in() ? '/' : 'user/login');
+	}
 	
 	public function login(){
 		helper('form');
@@ -666,16 +674,27 @@ class User extends BaseController
 				 . view('templates/footer');
 		}
 
+		// 10 tries a minute per address, like the app's sign-in
+		if (! service('throttler')->check('web-login-' . md5($this->request->getIPAddress()), 10, MINUTE)) {
+			session()->setFlashdata('error', 'Too many tries. Wait a minute and try again.');
+			return redirect()->back()->withInput();
+		}
+
 		$email = $this->request->getPost('email');
 		$password = $this->request->getPost('password');
 
 		// 1. Find user by email ONLY first
 		$user = $model->where('email', $email)->first();
 		if ($user && password_verify($password, $user['password']) && !$user['deleted']) {
-			
-			// 2. Check if they are approved
+
+			// 2. The email has to be confirmed first; the right password earns a fresh link
+			if (in_array($user['status'], Signup::UNCONFIRMED, true)) {
+				Signup::sendConfirmation($user);
+				session()->setFlashdata('error', 'Confirm your email first. We just sent a new link to ' . $user['email'] . '.');
+				return redirect()->back()->withInput();
+			}
 			if ($user['status'] !== 'approved') {
-				session()->setFlashdata('error', 'Your account is pending approval by an admin.');
+				session()->setFlashdata('error', 'This account can\'t log in. Use the contact page if you think that is a mistake.');
 				return redirect()->back()->withInput();
 			}
 

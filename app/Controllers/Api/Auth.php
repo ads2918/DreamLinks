@@ -3,6 +3,7 @@
 namespace App\Controllers\Api;
 
 use App\Filters\ApiAuth;
+use App\Libraries\Signup;
 use App\Models\ApiTokenModel;
 use App\Models\UserModel;
 
@@ -22,8 +23,12 @@ class Auth extends ApiController
 		if (! $user || $user['deleted'] || ! password_verify($password, $user['password'])) {
 			return $this->respond(['error' => 'That email and password don\'t match.'], 401);
 		}
+		if (in_array($user['status'], Signup::UNCONFIRMED, true)) {
+			Signup::sendConfirmation($user);
+			return $this->respond(['error' => 'Confirm your email first. We just sent a new link to ' . $user['email'] . '.'], 403);
+		}
 		if ($user['status'] !== 'approved') {
-			return $this->respond(['error' => 'Your account is waiting for an admin to approve it.'], 403);
+			return $this->respond(['error' => 'This account can\'t sign in.'], 403);
 		}
 		$token = model(ApiTokenModel::class)->issue((int) $user['id'], (string) ($in['device'] ?? 'Android app'));
 		ApiAuth::$user = $user;

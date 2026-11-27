@@ -30,6 +30,7 @@ $avatar = $profile_user['image'] == '' ? base_url('assets/images/no-image.png') 
 				<?php endif; ?>
 				<a class="dl-btn is-small is-plain" href="<?= site_url('user/' . (int) $session_user . '/dreamscape?with=' . (int) $profile_user['id']); ?>"><i class="bi bi-diagram-3"></i> Compare dreamscapes</a>
 				<button type="button" class="dl-link-quiet profile-block-link" link_id="<?= (int) $profile_user['id'] ?>"><i class="bi bi-slash-circle"></i> Block</button>
+				<a class="dl-link-quiet" href="<?= site_url('report?user=' . (int) $profile_user['id']); ?>"><i class="bi bi-flag"></i> Report</a>
 			</div>
 		<?php endif; ?>
 	</aside>

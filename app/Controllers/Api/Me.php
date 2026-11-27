@@ -2,6 +2,7 @@
 
 namespace App\Controllers\Api;
 
+use App\Libraries\AccountDeletion;
 use App\Models\UserModel;
 
 class Me extends ApiController
@@ -68,5 +69,17 @@ class Me extends ApiController
 			$model->update($this->uid(), $fields);
 		}
 		return $this->respond(self::profile($model->find($this->uid())));
+	}
+
+	/** POST api/v1/me/delete {password}: deletes the account and everything in it, for good */
+	public function delete()
+	{
+		if (! password_verify((string) ($this->input()['password'] ?? ''), $this->user()['password'])) {
+			return $this->invalid(['password' => 'That password is not right.']);
+		}
+		if (! AccountDeletion::erase($this->uid())) {
+			return $this->respond(['error' => 'Something went wrong and your account was not deleted. Try again.'], 500);
+		}
+		return $this->respond(['ok' => true]);
 	}
 }

@@ -73,6 +73,7 @@
 			</div>
 		</div>
 	</form>
+	<p class="dl-hint" style="text-align:center;margin-top:18px">Want to leave? <a href="<?= site_url('account/delete'); ?>">Delete your account</a></p>
 </div>
 
  

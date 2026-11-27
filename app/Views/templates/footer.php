@@ -3,7 +3,7 @@
 		<footer class="dl-footer">
 			<div class="dl-wrap">
 				<span>&copy; <?= date('Y'); ?> DreamLinks</span>
-				<span><a href="<?= site_url('learn'); ?>">How to lucid dream</a> · <a href="<?= site_url('contact'); ?>">Contact</a></span>
+				<span><a href="<?= site_url('learn'); ?>">How to lucid dream</a> · <a href="<?= site_url('contact'); ?>">Contact</a> · <a href="<?= site_url('account/delete'); ?>">Delete account</a></span>
 			</div>
 		</footer>
 

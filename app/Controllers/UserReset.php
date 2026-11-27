@@ -92,7 +92,9 @@ class UserReset extends BaseController {
 				$model->update($user['id'], [
 					'password'      => password_hash($this->request->getPost('password'), PASSWORD_DEFAULT),
 					'reset_token'   => null, 
-					'reset_expires' => null
+					'reset_expires' => null,
+					// the reset link came by email, so the address is confirmed too
+					'status'        => in_array($user['status'], \App\Libraries\Signup::UNCONFIRMED, true) ? 'approved' : $user['status'],
 				]);
 
 				// --- THIS PART WAS MISSING ---

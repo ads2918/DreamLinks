@@ -17,6 +17,9 @@ $avatar = $dream['image'] == '' ? base_url('assets/images/no-image.png') : base_
 		<?php if ($dream['visibility'] === 'friends'): ?>
 			<span class="dl-vis" title="Shared with links"><i class="bi bi-people"></i></span>
 		<?php endif; ?>
+		<?php if (! $own): ?>
+			<a class="dl-vis dl-report-link" href="<?= site_url('report?dream=' . (int) $dream['id']); ?>" title="Report this dream"><i class="bi bi-flag"></i><span class="dl-visually-hidden">Report this dream</span></a>
+		<?php endif; ?>
 	</header>
 	<h2><?= esc($dream['title']) ?></h2>
 	<p class="dl-dream-text"><?= nl2br(esc($dream['full_description'])) ?></p>

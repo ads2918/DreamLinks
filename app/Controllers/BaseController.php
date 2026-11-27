@@ -41,6 +41,8 @@ abstract class BaseController extends Controller
      * @var list<string>
      */
     protected $helpers = [];
+	/** Where contact messages and reports go. */
+	public const ADMIN_EMAIL = 'dreamlinks1111@gmail.com';
 	protected $admin_email;
 	protected $upload_path;
 
@@ -58,7 +60,7 @@ abstract class BaseController extends Controller
         // Do Not Edit This Line
         parent::initController($request, $response, $logger);   
 		// Preload any models, libraries, etc, here.
-		$this->admin_email = 'dreamlinks1111@gmail.com';
+		$this->admin_email = self::ADMIN_EMAIL;
         $this->session = service('session');
 		
 		$session = \Config\Services::session();
@@ -94,12 +96,12 @@ abstract class BaseController extends Controller
         $email->setSubject($subject);
         $email->setMessage($message);
 
-        if ($email->send()) {
+        if ($email->send(false)) {
             return 1;
         } else {
-            // You can get debugging info with:
+			// to the log, never the page: the SMTP chatter is not for visitors
 			if($debug){
-				var_dump($email->printDebugger(['headers']));
+				log_message('error', 'Email "{subject}" failed: {debug}', ['subject' => $subject, 'debug' => $email->printDebugger(['headers'])]);
 			}
 			return false;
         }
