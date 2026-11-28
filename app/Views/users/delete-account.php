@@ -40,6 +40,10 @@ $headings = [
 				<li>Sign-ins on the app</li>
 			</ul>
 
+			<?php if ($step !== 'confirm'): ?>
+				<p class="dl-hint">Only want some of it gone? You can keep your account and delete just that: open any of your dreams and delete it, unlink or unblock people from your links, and change or clear your picture and bio in your settings. Deleted dreams are removed for good straight away.</p>
+			<?php endif; ?>
+
 			<?php if ($step === 'password'): ?>
 				<div class="dl-field">
 					<label for="password">Your password</label>
